@@ -1,7 +1,7 @@
 'use client';
 
 import type {
-  BupotDoc, MainAccountProfile, Person, RoleAssignment, Session, SptDoc, TaxEntity, Tku,
+  BupotDoc, MainAccountProfile, Person, RelatedParty, RoleAssignment, Session, SptDoc, TaxEntity, Tku,
 } from '@/lib/domain/types';
 
 /**
@@ -14,7 +14,7 @@ import type {
  * dan tidak menimbulkan error saat dibaca komponen versi baru.
  */
 const PREFIX = 'edutax.uny.v1';
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 export interface Database {
   schemaVersion: number;
@@ -22,6 +22,7 @@ export interface Database {
   entities: TaxEntity[];
   tkus: Tku[];
   roleAssignments: RoleAssignment[];
+  relatedParties: RelatedParty[];
   bupots: BupotDoc[];
   spts: SptDoc[];
   session: Session | null;
@@ -37,6 +38,7 @@ export const EMPTY_DB: Database = {
   entities: [],
   tkus: [],
   roleAssignments: [],
+  relatedParties: [],
   bupots: [],
   spts: [],
   session: null,

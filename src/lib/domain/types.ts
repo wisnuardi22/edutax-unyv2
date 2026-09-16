@@ -207,3 +207,32 @@ export interface MainAccountProfile {
 export function emptyMainAccountProfile(nik: string, nama: string): MainAccountProfile {
   return { nik, nama, alamat: '', email: '', phone: '', signingCredential: null };
 }
+
+/**
+ * Pihak Terkait & PIC (slide 23-33, "Penggantian PIC"). Berbeda dari PIC TKU
+ * (`Tku.picNiks`, yang mengatur siapa PIC per Tempat Kegiatan Usaha), ini
+ * adalah PIC tingkat Badan itu sendiri — satu-satunya orang yang punya akses
+ * penuh mengelola seluruh fitur Coretax milik Badan tersebut dan menjadi
+ * default penandatangan. Diakses lewat Informasi Umum → Pihak Terkait pada
+ * akun Badan.
+ */
+export type RelatedPartyKind = 'RELATED_PERSON' | 'RELATED_TAXPAYER';
+export type RelatedPersonRole = 'DIREKTUR' | 'KOMISARIS' | 'PEMEGANG_SAHAM' | 'WAKIL' | 'LAINNYA';
+
+export interface RelatedParty {
+  id: string;
+  entityTin: string;
+  kind: RelatedPartyKind;
+  role: RelatedPersonRole;
+  personNik: string;
+  personName: string;
+  nationality: string;
+  countryOfOrigin: string;
+  email: string;
+  phone: string;
+  passportNumber: string;
+  /** "Apakah Penanggung Jawab" — hanya satu yang boleh true per Badan. */
+  isPic: boolean;
+  validFrom: string;  // dd-mm-yyyy
+  validTo: string | null;
+}

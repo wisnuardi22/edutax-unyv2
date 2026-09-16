@@ -82,6 +82,34 @@ itu tidak dapat dikreditkan.
 
 ## Modul yang sudah selesai
 
+**Pihak Terkait & Penggantian PIC** (`/portal` → sidebar "Pihak Terkait", hanya
+untuk akun Badan) — mengikuti slide 23-33 apa adanya:
+- Tabel Pihak Terkait dengan aksi Edit/Hapus/Lihat, tombol Tambah membuka
+  dialog dengan dropdown Jenis Pihak Terkait (Related Person/Related
+  Taxpayer), checkbox "Apakah PIC?", dropdown Jenis Orang Terkait
+  (Direktur/Komisaris/Pemegang Saham/Wakil/Lainnya), field NIK/TIN yang
+  auto-mengisi Nama & Kewarganegaraan bila cocok dengan `Person` yang sudah
+  terdaftar di Manajemen Akses, serta Valid Dari (wajib) dan Valid Sampai
+  (opsional).
+- **Hanya satu PIC per Badan ditegakkan lewat validasi, bukan auto-swap.**
+  Mencentang "Apakah PIC?" pada pihak baru saat PIC lain masih aktif akan
+  ditolak dengan pesan yang menuntun ke prosedur yang benar — lepas dulu
+  status PIC lama (Edit → hilangkan centang → Save) sebelum menetapkan yang
+  baru. Ini sengaja tidak dibuat otomatis, karena PDF mengajarkan urutan dua
+  langkah ini sebagai prosedur yang harus dipahami, bukan detail teknis yang
+  boleh disembunyikan.
+- **Pola draft-lalu-Kirim.** Perubahan pada dialog Tambah/Edit/Hapus hanya
+  tersimpan sebagai state lokal komponen sampai kotak Pernyataan dicentang
+  dan tombol Kirim ditekan — meniru pemisahan eksplisit antara "Save" pada
+  dialog dan "Kirim" pada penutup formulir yang ditunjukkan di slide 30-31.
+- **PIC Badan diintegrasikan ke model otorisasi** (`isEntityPic()` di
+  `src/lib/auth/access.ts`): siapa pun yang `isPic: true` untuk Badan yang
+  sedang diwakili otomatis lolos `hasRole()`, `isPusat()`, `canDraft()`, dan
+  `canSign()` tanpa perlu role eksplisit apa pun — persis catatan di slide 33
+  bahwa PIC "dapat mengelola seluruh fitur serta menandatangani semua
+  permohonan". Ini berbeda dari PIC TKU (`Tku.picNiks`) yang hanya membatasi
+  cakupan satu TKU, bukan akses penuh ke seluruh Badan.
+
 **Perbaikan tampilan (font & header).** Font Poppins sempat tidak kepakai di
 sebagian environment (tampil sebagai serif bawaan browser) karena hanya
 dititipkan lewat variabel CSS `--font-poppins` di `<html>`, mengandalkan
@@ -210,7 +238,11 @@ adanya:
    belum ada kredensial sama sekali, tombol tanda tangan diarahkan dulu ke
    Portal Saya untuk mendaftar.
 2. Terapkan `filterVisibleBupots()` dari `src/lib/auth/access.ts` pada tabel
-   BPMP dan lampiran SPT, agar pembatasan pusat vs PIC TKU benar-benar terasa.
+   BPMP dan lampiran SPT, agar pembatasan pusat vs PIC TKU benar-benar
+   terasa. Fungsi ini (dan `canDraft`/`canSign`/`isPusat`) sudah menerima
+   parameter `parties: RelatedParty[]` untuk bypass akses PIC Badan — tinggal
+   dipanggil dengan `db.relatedParties` dari halaman eBupot/SPT, belum ada
+   satu pun halaman yang benar-benar memanggilnya hari ini.
 3. Filter dropdown "Taxpayers" pada `IdentitySwitcher` berdasarkan
    `RoleAssignment` orang yang login — saat ini semua Badan terdaftar
    ditampilkan tanpa memeriksa apakah orang tersebut benar-benar diberi role.
