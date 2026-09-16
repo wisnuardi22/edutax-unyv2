@@ -82,6 +82,22 @@ itu tidak dapat dikreditkan.
 
 ## Modul yang sudah selesai
 
+**Perbaikan tampilan (font & header).** Font Poppins sempat tidak kepakai di
+sebagian environment (tampil sebagai serif bawaan browser) karena hanya
+dititipkan lewat variabel CSS `--font-poppins` di `<html>`, mengandalkan
+Tailwind Preflight meneruskannya secara implisit ke `body`. Sekarang
+`poppins.className` diterapkan langsung ke `<body>` di `src/app/layout.tsx`
+(pola resmi Next.js untuk kasus begini), plus `font-sans` di-`@apply` eksplisit
+pada `body` di `globals.css` sebagai lapisan kedua. Header (`AppShell.tsx`)
+juga dilengkapi utility bar penuh persis referensi: ikon muat ulang, pil versi
+(punya EduTax sendiri, bukan nomor build DJP), dropdown bahasa, ikon
+notifikasi dengan lencana jumlah (dihitung sungguhan dari bupot berstatus
+SUBMITTED dan SPT berstatus KONSEP, bukan angka dekoratif), ikon bantuan,
+dropdown identitas, teks "Login terakhir", tombol Reset data (tambahan
+EduTax), dan tombol Keluar. Sidebar pada halaman Portal Saya, eBupot, dan SPT
+juga diubah dari lebar piksel tetap menjadi `minmax()` supaya lebih adaptif
+mengikuti lebar layar.
+
 **Data contoh otomatis** (`src/lib/domain/portal.ts`, fungsi `ensureSeedData`)
 — dipanggil saat login, bukan menunggu pendaftaran manual. Begitu masuk,
 dropdown identitas sudah terisi Main Account **RAKA** (NIK `3271022601770007`)

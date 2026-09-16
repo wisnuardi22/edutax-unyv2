@@ -32,7 +32,7 @@ export default function PortalPage() {
   const breadcrumbName = activeEntity ? activeEntity.name : session.personName;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(240px,22%)_1fr]">
       <aside className="rounded-card bg-white p-3 shadow-card">
         <p className="px-2 pb-0.5 text-[15px] font-semibold leading-tight text-ink">{breadcrumbId}</p>
         <p className="px-2 pb-2 text-[13px] leading-tight text-ink-muted">{breadcrumbName}</p>

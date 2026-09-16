@@ -137,7 +137,7 @@ export default function BpmpPage() {
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+    <div className="grid gap-4 lg:grid-cols-[minmax(220px,20%)_1fr]">
       <aside className="rounded-card bg-white p-3 shadow-card">
         <p className="px-2 pb-2 text-[13px] font-semibold text-brand-800">
           Bukti Pemotongan Bulanan Pegawai Tetap

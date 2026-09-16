@@ -7,7 +7,7 @@
     color-scheme: light;
   }
   body {
-    @apply bg-canvas text-ink antialiased;
+    @apply bg-canvas text-ink antialiased font-sans;
   }
   /* Fokus keyboard harus selalu terlihat: dipakai 25 mahasiswa bergantian. */
   :focus-visible {
