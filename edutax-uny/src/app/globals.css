@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+  body {
+    @apply bg-canvas text-ink antialiased;
+  }
+  /* Fokus keyboard harus selalu terlihat: dipakai 25 mahasiswa bergantian. */
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-1 ring-offset-white;
+  }
+}
+
+@layer components {
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-medium text-ink;
+  }
+  .field-input {
+    @apply w-full rounded-md border border-line bg-white px-3 py-2.5 text-sm
+           placeholder:text-ink-muted/70 focus:border-brand-500 focus:outline-none
+           focus:ring-2 focus:ring-brand-500/25;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5
+           text-sm font-semibold text-ink transition hover:brightness-95
+           disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-md border border-brand-500
+           bg-white px-3.5 py-2 text-sm font-medium text-brand-600 transition
+           hover:bg-brand-50 disabled:opacity-50;
+  }
+  /* Tabel padat mengikuti densitas Coretax, bukan tabel marketing yang lega. */
+  .data-table {
+    @apply w-full border-collapse text-[13px];
+  }
+  .data-table th {
+    @apply border-b border-line bg-brand-50 px-3 py-2.5 text-left font-semibold text-brand-800;
+  }
+  .data-table td {
+    @apply border-b border-line px-3 py-2 align-middle;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
