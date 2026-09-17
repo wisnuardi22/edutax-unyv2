@@ -67,7 +67,7 @@ export default function SptListPage() {
         ))}
       </aside>
 
-      <section className="rounded-card bg-white p-4 shadow-card">
+      <section className="min-w-0 rounded-card bg-white p-4 shadow-card">
         <div className="flex items-center gap-2">
           <h1 className="font-semibold">{SIDEBAR.find((s) => s.key === status)!.label}</h1>
           {status === 'KONSEP' && (

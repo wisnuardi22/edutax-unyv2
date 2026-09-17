@@ -75,10 +75,14 @@ export default function PortalPage() {
         ))}
       </aside>
 
-      <section className="rounded-card bg-white p-5 shadow-card">
+      <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
         {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
         {tab === 'informasi-umum' && (
-          <InformasiUmumSection entity={activeEntity ?? null} session={session} />
+          <InformasiUmumSection
+            entity={activeEntity ?? null}
+            session={session}
+            relatedParties={db.relatedParties}
+          />
         )}
         {tab === 'pihak-terkait' && (
           <PihakTerkaitSection
@@ -161,9 +165,11 @@ interface FlagRow {
 function InformasiUmumSection({
   entity,
   session,
+  relatedParties,
 }: {
   entity: { tin: string; name: string; address: string } | null;
   session: { personNik: string; personName: string };
+  relatedParties: RelatedParty[];
 }) {
   const [subTab, setSubTab] = useState<'general' | 'flags'>('general');
 
@@ -171,6 +177,15 @@ function InformasiUmumSection({
   const profile = isBadan
     ? profileForEntity(entity!.tin, entity!.name, entity!.address)
     : profileForMainAccount(session.personNik, session.personName);
+
+  // Bukan field asli pada slide Informasi Umum — PDF hanya menjelaskan PIC
+  // lewat submenu Pihak Terkait terpisah. Baris ini ditambahkan sebagai
+  // pintasan lihat-cepat khusus EduTax, ditandai jelas sebagai tambahan,
+  // supaya begitu PIC ditentukan di Pihak Terkait, hasilnya langsung
+  // terlihat di sini tanpa harus membuka tab lain.
+  const activePic = isBadan
+    ? relatedParties.find((p) => p.entityTin === entity!.tin && p.isPic)
+    : null;
 
   const flags: FlagRow[] = isBadan
     ? [
@@ -230,6 +245,21 @@ function InformasiUmumSection({
                 Aktif
               </span>
             </div>
+            {isBadan && (
+              <div>
+                <p className="text-[13px] font-semibold text-ink">PIC (Penanggung Jawab) Aktif</p>
+                {activePic ? (
+                  <p className="mt-0.5 text-[13px] text-ink-muted">
+                    {activePic.personName}{' '}
+                    <span className="font-mono">({activePic.personNik})</span>
+                  </p>
+                ) : (
+                  <p className="mt-0.5 text-[13px] text-warn">
+                    Belum ditentukan — atur di menu Pihak Terkait
+                  </p>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="space-y-3">
@@ -281,7 +311,10 @@ function InformasiUmumSection({
         Kerja, status flag individual, kantor pajak) diisi wajar untuk simulasi karena tertutup
         anotasi atau tidak relevan dengan identitas Badan swasta yang dipakai aplikasi ini (contoh
         asli DJP berupa Instansi Pemerintah). "Kategori Institusi Pemerintah" pada contoh diganti
-        "Kategori Wajib Pajak" karena field itu tidak berlaku untuk Badan usaha biasa.
+        "Kategori Wajib Pajak" karena field itu tidak berlaku untuk Badan usaha biasa. Baris
+        "PIC (Penanggung Jawab) Aktif" bukan field asli pada slide Informasi Umum — panduan aslinya
+        mengarahkan ke submenu Pihak Terkait terpisah untuk melihat PIC — ditambahkan di sini
+        sebagai pintasan lihat-cepat khusus EduTax, mengikuti data yang sama dari tab Pihak Terkait.
       </p>
     </div>
   );

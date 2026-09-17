@@ -155,7 +155,7 @@ export default function BpmpPage() {
         ))}
       </aside>
 
-      <section className="rounded-card bg-white p-4 shadow-card">
+      <section className="min-w-0 rounded-card bg-white p-4 shadow-card">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="font-semibold">EBUPOT MP — {TABS.find((t) => t.key === tab)!.label}</h1>
           <div className="ml-auto flex gap-2">

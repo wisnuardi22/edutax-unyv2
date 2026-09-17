@@ -153,6 +153,21 @@ Main Account (Orang Pribadi) mendapat versi ringkas tanpa Taxpayer Flags,
 karena flag-flag tersebut (faktur pajak, PPN, dst.) memang konsep khusus
 Badan. Tombol Edit belum berfungsi (menampilkan pesan "tahap pengembangan
 berikutnya") karena slide yang tersedia belum mendokumentasikan alur edit-nya.
+Ditambahkan pula baris **"PIC (Penanggung Jawab) Aktif"** yang membaca
+`db.relatedParties` — begitu PIC ditentukan lewat tab Pihak Terkait, namanya
+langsung terlihat di sini tanpa perlu berpindah tab. Ini bukan field asli
+pada slide (panduan aslinya mengarahkan ke submenu Pihak Terkait terpisah
+untuk melihat PIC), ditandai jelas di catatan kaki halaman sebagai pintasan
+tambahan khusus EduTax.
+
+**Tabel lebar tidak lagi menggeser seluruh halaman.** Tabel Pihak Terkait
+15-kolom sebelumnya membuat seluruh halaman (termasuk sidebar) ikut bergeser
+horizontal saat tabel di-scroll, karena grid item CSS secara bawaan tidak mau
+menyusut di bawah lebar intrinsik kontennya. `min-w-0` sudah ada di kontainer
+`<section>`, tapi sebagai lapisan pertahanan kedua `overflow-x-hidden`
+ditambahkan eksplisit ke `<body>` di `globals.css` — jadi meskipun ada tabel
+lebar di halaman lain nanti, hanya tabelnya sendiri yang bisa digeser
+(lewat `overflow-x-auto` pada pembungkusnya), bukan seluruh halaman.
 
 **Informasi Umum Wajib Pajak** (`/portal` → sidebar "Informasi Umum") —
 struktur & label mengikuti screenshot revisi apa adanya: tombol Edit, sub-tab
