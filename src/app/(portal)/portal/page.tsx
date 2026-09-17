@@ -4,20 +4,26 @@ import { useState } from 'react';
 import { useDb } from '@/lib/storage/useDb';
 import {
   INFORMASI_RINCIAN_MENU,
+  PROFIL_SHORTCUT_KEYS,
   profileForEntity,
   profileForMainAccount,
   type Profile360,
 } from '@/lib/domain/portal';
 import { BelumTersedia } from '@/components/ui/BelumTersedia';
-import type { RelatedParty, RelatedPartyKind, RelatedPersonRole } from '@/lib/domain/types';
+import {
+  taxpayerClassification,
+  type RelatedParty,
+  type RelatedPartyKind,
+  type RelatedPersonRole,
+} from '@/lib/domain/types';
 
 /**
- * Portal Saya — halaman ini SEKARANG adalah "Taxpayer 360-Degree Overview"
- * (bukan lagi form registrasi), mengikuti identitas yang sedang aktif di
- * dropdown header: Main Account (RAKA) atau salah satu Taxpayer yang
- * diwakilinya. Sidebar "Informasi Rincian" mendaftar 16 item persis slide
- * 15-16; hanya "Ikhtisar Profil Wajib Pajak" yang datanya diisi penuh,
- * selebihnya ditandai belum tersedia (terlihat, bukan disembunyikan).
+ * Portal Saya — halaman ini adalah "Taxpayer 360-Degree Overview" (bukan
+ * form registrasi), mengikuti identitas yang sedang aktif di dropdown
+ * header: Main Account (RAKA) atau salah satu Taxpayer yang diwakilinya.
+ * Sidebar "Informasi Rincian" mendaftar 17 item persis screenshot revisi,
+ * plus dua pintasan (Wakil/Kuasa Saya, Wajib Pajak yang Diwakili) di atasnya
+ * yang menunjuk ke key yang sama — itu memang tampil dua kali di aslinya.
  */
 export default function PortalPage() {
   const { db } = useDb();
@@ -38,8 +44,23 @@ export default function PortalPage() {
         <p className="px-2 pb-0.5 text-[15px] font-semibold leading-tight text-ink">{breadcrumbId}</p>
         <p className="px-2 pb-2 text-[13px] leading-tight text-ink-muted">{breadcrumbName}</p>
 
+        {PROFIL_SHORTCUT_KEYS.map((key) => {
+          const item = INFORMASI_RINCIAN_MENU.find((m) => m.key === key)!;
+          return (
+            <button
+              key={`shortcut-${key}`}
+              onClick={() => setTab(key)}
+              className={`block w-full rounded px-2 py-2 text-left text-[13px] ${
+                tab === key ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-canvas'
+              }`}
+            >
+              {item.label}
+            </button>
+          );
+        })}
+
         <p className="mt-2 px-2 pb-1 text-xxs font-semibold uppercase tracking-wide text-ink-muted">
-          Informasi Rincian
+          Informasi Detail
         </p>
         {INFORMASI_RINCIAN_MENU.map((m) => (
           <button
@@ -56,13 +77,16 @@ export default function PortalPage() {
 
       <section className="rounded-card bg-white p-5 shadow-card">
         {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
+        {tab === 'informasi-umum' && (
+          <InformasiUmumSection entity={activeEntity ?? null} session={session} />
+        )}
         {tab === 'pihak-terkait' && (
           <PihakTerkaitSection
             key={activeEntity?.tin ?? 'main'}
             entityTin={activeEntity?.tin ?? null}
           />
         )}
-        {tab !== 'ikhtisar' && tab !== 'pihak-terkait' && (
+        {tab !== 'ikhtisar' && tab !== 'informasi-umum' && tab !== 'pihak-terkait' && (
           <BelumTersedia
             judul={INFORMASI_RINCIAN_MENU.find((m) => m.key === tab)!.label}
             tahap="tahap pengembangan berikutnya"
@@ -118,6 +142,182 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   );
 }
 
+/* ------------------------------------------------------------ Informasi Umum */
+
+interface FlagRow {
+  label: string;
+  value: boolean;
+}
+
+/**
+ * "Informasi Umum Wajib Pajak" — mengikuti screenshot revisi apa adanya
+ * untuk STRUKTUR tabel & label, tapi ISINYA disesuaikan dengan identitas
+ * yang benar-benar dipakai di aplikasi ini (Badan swasta "PT Karya Mandiri
+ * Sejahtera" atau OP "RAKA"), bukan disalin literal dari contoh DJP yang
+ * kebetulan berupa Instansi Pemerintah — field seperti "Kategori Institusi
+ * Pemerintah" jelas tidak relevan untuk PT biasa, jadi diganti padanan yang
+ * masuk akal ("Kategori Wajib Pajak"), dicatat di footnote agar transparan.
+ */
+function InformasiUmumSection({
+  entity,
+  session,
+}: {
+  entity: { tin: string; name: string; address: string } | null;
+  session: { personNik: string; personName: string };
+}) {
+  const [subTab, setSubTab] = useState<'general' | 'flags'>('general');
+
+  const isBadan = !!entity;
+  const profile = isBadan
+    ? profileForEntity(entity!.tin, entity!.name, entity!.address)
+    : profileForMainAccount(session.personNik, session.personName);
+
+  const flags: FlagRow[] = isBadan
+    ? [
+        { label: 'Penonaktifan Akses Pembuatan Faktur Pajak', value: false },
+        { label: 'Pemungut PPN eCommerce', value: false },
+        { label: 'Penghasilan atau Pemotong atau Pemungut PPN', value: true },
+        { label: 'PPN yang dianggap', value: false },
+        { label: 'Pengembalian PPN', value: false },
+        { label: 'Lembaga Keuangan Pelapor', value: false },
+        { label: 'Pemungut Bea Materai', value: false },
+        { label: 'Pembayaran Non Kas', value: false },
+        { label: 'PMK-131/PMK.03/2017', value: false },
+        { label: 'Perusahaan Tercatat', value: false },
+        { label: 'Badan Usaha Milik Negara', value: false },
+      ]
+    : [];
+
+  return (
+    <div>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-lg font-semibold">Informasi Umum Wajib Pajak</h1>
+        <button
+          className="btn-primary shrink-0"
+          onClick={() => alert('Fitur Edit disiapkan pada tahap pengembangan berikutnya.')}
+        >
+          Edit
+        </button>
+      </div>
+
+      <nav className="mt-3 flex gap-4 border-b border-line text-[13px]">
+        {(['general', 'flags'] as const).map((k) => (
+          <button
+            key={k}
+            onClick={() => setSubTab(k)}
+            className={`-mb-px border-b-2 px-1 pb-2 ${
+              subTab === k ? 'border-brand-500 font-semibold text-brand-700' : 'border-transparent text-ink-muted hover:text-ink'
+            }`}
+          >
+            {k === 'general' ? 'General' : 'Taxpayer Flags'}
+          </button>
+        ))}
+      </nav>
+
+      {subTab === 'general' && (
+        <div className="mt-4 grid gap-x-10 gap-y-3 lg:grid-cols-2">
+          <div className="space-y-3">
+            <KV label="Nomor Pokok Wajib Pajak" value={profile.tin} mono />
+            {isBadan && <KV label="Kode Unit Kerja" value="440941" />}
+            <KV label="Nama Wajib Pajak" value={profile.name} />
+            <KV label="Jenis Wajib Pajak" value={profile.taxpayerType} />
+            <KV label="Kategori Wajib Pajak" value={profile.taxpayerCategory} />
+            <KV label="Tanggal Pendaftaran" value={profile.dateRegistered} />
+            <KV label="Tanggal Aktivasi" value={profile.activationDate} />
+            <div>
+              <p className="text-[13px] font-semibold text-ink">Status Wajib Pajak</p>
+              <span className="mt-1 inline-block rounded bg-good/15 px-2 py-0.5 text-xxs font-semibold text-good">
+                Aktif
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {isBadan ? (
+              <>
+                {flags.map((f) => (
+                  <div key={f.label} className="flex items-center justify-between gap-3 text-[13px]">
+                    <span className="text-ink">{f.label}</span>
+                    <span className={f.value ? 'text-good' : 'text-bad'}>{f.value ? '✓' : '✕'}</span>
+                  </div>
+                ))}
+                <KV label="Bahasa yang Dipilih" value="Indonesia" />
+                <KV label="Kantor Wilayah" value={profile.regionalTaxOffice} />
+                <KV label="Kantor Pelayanan Pajak" value={profile.localTaxOffice} />
+                <KV label="Nomor Telepon Seluler Utama" value="—" />
+                <KV label="Alamat Surat Elektronik Utama" value="—" />
+              </>
+            ) : (
+              <p className="rounded-md border border-line bg-canvas p-3 text-[13px] text-ink-muted">
+                Flag-flag di kolom ini (faktur pajak, PKP, eCommerce, dst.) hanya berlaku untuk akun
+                Badan, sehingga tidak relevan ditampilkan untuk Main Account.
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'flags' && (
+        <div className="mt-4">
+          {isBadan ? (
+            <div className="max-w-md space-y-3">
+              {flags.map((f) => (
+                <div key={f.label} className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2 text-[13px]">
+                  <span className="text-ink">{f.label}</span>
+                  <span className={f.value ? 'text-good' : 'text-bad'}>{f.value ? '✓ Ya' : '✕ Tidak'}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-md border border-line bg-canvas p-3 text-[13px] text-ink-muted">
+              Tidak ada Taxpayer Flags untuk akun Orang Pribadi.
+            </p>
+          )}
+        </div>
+      )}
+
+      <p className="mt-6 text-xxs text-ink-muted">
+        Struktur & label pada halaman ini mengikuti screenshot panduan; sejumlah nilai (Kode Unit
+        Kerja, status flag individual, kantor pajak) diisi wajar untuk simulasi karena tertutup
+        anotasi atau tidak relevan dengan identitas Badan swasta yang dipakai aplikasi ini (contoh
+        asli DJP berupa Instansi Pemerintah). "Kategori Institusi Pemerintah" pada contoh diganti
+        "Kategori Wajib Pajak" karena field itu tidak berlaku untuk Badan usaha biasa.
+      </p>
+    </div>
+  );
+}
+
+function KV({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div>
+      <p className="text-[13px] font-semibold text-ink">{label}</p>
+      <p className={`mt-0.5 text-[13px] text-ink-muted ${mono ? 'font-mono' : ''}`}>{value}</p>
+    </div>
+  );
+}
+
+/**
+ * Kotak centang biru kecil persis kolom boolean pada tabel Pihak Terkait di
+ * slide (Merupakan Orang Terkait, Apakah Penanggung Jawab, dst.) — bukan teks
+ * checkmark atau badge, supaya tabelnya benar-benar sama persis tampilannya.
+ */
+function CheckboxCell({ checked }: { checked: boolean }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex h-4 w-4 items-center justify-center rounded-sm border ${
+        checked ? 'border-brand-500 bg-brand-500 text-white' : 'border-line bg-white'
+      }`}
+    >
+      {checked && (
+        <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
+          <path d="M3.5 8.5L6.5 11.5L12.5 4.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 /* -------------------------------------------------- Pihak Terkait & PIC */
 
 const ROLE_LABELS: Record<RelatedPersonRole, string> = {
@@ -135,12 +335,15 @@ function todayDMY() {
 }
 
 /**
- * Pihak Terkait & Penggantian PIC — mengikuti slide 23-33 apa adanya.
- * Berbeda dari layar lain di aplikasi ini, perubahan pada dialog Tambah/Edit
- * TIDAK langsung tersimpan ke localStorage; ia hanya menjadi "draft" lokal
- * sampai bagian Pernyataan dicentang dan tombol Kirim ditekan (langkah 6 pada
- * panduan) — meniru pemisahan antara "Save" pada dialog dan "Kirim" pada
- * penutup formulir yang eksplisit ditunjukkan di slide.
+ * Pihak Terkait & Penggantian PIC — mengikuti slide 23-33 apa adanya, dengan
+ * seluruh kolom tabel persis screenshot revisi (Tindakan sampai Valid
+ * Sampai, termasuk yang baru terlihat setelah digulir ke kanan: Saham,
+ * Kriteria Pemilik Manfaat, Merupakan Orang Terkait, Merupakan Wajib Pajak
+ * Terkait, Adalah Data Eksternal). Berbeda dari layar lain di aplikasi ini,
+ * perubahan pada dialog Tambah/Edit TIDAK langsung tersimpan ke
+ * localStorage; ia hanya menjadi "draft" lokal sampai bagian Pernyataan
+ * dicentang dan tombol Kirim ditekan — meniru pemisahan antara "Save" pada
+ * dialog dan "Kirim" pada penutup formulir yang eksplisit ditunjukkan di slide.
  */
 function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
   const { db, mutate } = useDb();
@@ -224,10 +427,17 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
             <tr>
               <th>Tindakan</th>
               <th>NIK/NPWP Orang</th>
-              <th>Jenis Orang Terkait</th>
+              <th>Jenis Wajib Pajak</th>
+              <th>Kategori Wajib Pajak</th>
               <th>Nama Orang</th>
               <th>Kewarganegaraan</th>
+              <th>Nomor Paspor</th>
+              <th>Saham</th>
+              <th>Kriteria Pemilik Manfaat</th>
+              <th>Merupakan Orang Terkait</th>
+              <th>Merupakan Wajib Pajak Terkait</th>
               <th>Apakah Penanggung Jawab</th>
+              <th>Adalah Data Eksternal</th>
               <th>Valid Dari</th>
               <th>Valid Sampai</th>
             </tr>
@@ -235,41 +445,47 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
           <tbody>
             {draft.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-8 text-center text-ink-muted">
+                <td colSpan={15} className="py-8 text-center text-ink-muted">
                   Belum ada Pihak Terkait terdaftar. Klik Tambah untuk menambahkan.
                 </td>
               </tr>
             )}
-            {draft.map((p) => (
-              <tr key={p.id}>
-                <td className="whitespace-nowrap">
-                  <button className="mr-2 text-brand-600 hover:underline" onClick={() => setDialog({ mode: 'edit', party: p })}>
-                    Edit
-                  </button>
-                  <button className="mr-2 text-bad hover:underline" onClick={() => remove(p.id)}>
-                    Hapus
-                  </button>
-                  <button className="text-ink-muted hover:underline" onClick={() => setDialog({ mode: 'view', party: p })}>
-                    Lihat
-                  </button>
-                </td>
-                <td className="font-mono">{p.personNik}</td>
-                <td>{ROLE_LABELS[p.role]}</td>
-                <td>{p.personName}</td>
-                <td>{p.nationality}</td>
-                <td>
-                  {p.isPic ? (
-                    <span className="rounded bg-brand-50 px-2 py-0.5 text-xxs font-semibold text-brand-700">PIC</span>
-                  ) : (
-                    <span className="text-ink-muted">—</span>
-                  )}
-                </td>
-                <td>{p.validFrom}</td>
-                <td>{p.validTo ?? '—'}</td>
-              </tr>
-            ))}
+            {draft.map((p) => {
+              const cls = taxpayerClassification(p.kind);
+              const isRelatedPerson = p.kind === 'RELATED_PERSON';
+              return (
+                <tr key={p.id}>
+                  <td className="whitespace-nowrap">
+                    <button className="mr-2 text-brand-600 hover:underline" onClick={() => setDialog({ mode: 'edit', party: p })}>
+                      Edit
+                    </button>
+                    <button className="mr-2 text-bad hover:underline" onClick={() => remove(p.id)}>
+                      Hapus
+                    </button>
+                    <button className="text-ink-muted hover:underline" onClick={() => setDialog({ mode: 'view', party: p })}>
+                      Lihat
+                    </button>
+                  </td>
+                  <td className="font-mono">{p.personNik}</td>
+                  <td className="whitespace-nowrap">{cls.jenis}</td>
+                  <td>{cls.kategori}</td>
+                  <td>{p.personName}</td>
+                  <td className="whitespace-nowrap">Warga Negara {p.nationality}</td>
+                  <td>{p.passportNumber || '—'}</td>
+                  <td>{p.sharePercentage || '—'}</td>
+                  <td>{p.beneficialOwnerCriteria || '—'}</td>
+                  <td className="text-center"><CheckboxCell checked={isRelatedPerson} /></td>
+                  <td className="text-center"><CheckboxCell checked={!isRelatedPerson} /></td>
+                  <td className="text-center"><CheckboxCell checked={p.isPic} /></td>
+                  <td className="text-center"><CheckboxCell checked={p.isExternalData} /></td>
+                  <td className="whitespace-nowrap">{p.validFrom}</td>
+                  <td className="whitespace-nowrap">{p.validTo ?? '—'}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
+        <p className="mt-1 text-xxs text-ink-muted">Gulir ke kanan untuk melihat kolom selengkapnya.</p>
       </div>
 
       <div className="mt-5 rounded-md border border-line p-3">
@@ -346,6 +562,8 @@ function RelatedPartyDialog({
   const [country, setCountry] = useState(party?.countryOfOrigin ?? 'Indonesia');
   const [email, setEmail] = useState(party?.email ?? '');
   const [phone, setPhone] = useState(party?.phone ?? '');
+  const [share, setShare] = useState(party?.sharePercentage ?? '');
+  const [ubo, setUbo] = useState(party?.beneficialOwnerCriteria ?? '');
   const [validFrom, setValidFrom] = useState(party?.validFrom ?? todayDMY());
   const [validTo, setValidTo] = useState(party?.validTo ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -390,7 +608,10 @@ function RelatedPartyDialog({
       email: email.trim(),
       phone: phone.trim(),
       passportNumber: passport.trim(),
+      sharePercentage: share.trim(),
+      beneficialOwnerCriteria: ubo.trim(),
       isPic,
+      isExternalData: party?.isExternalData ?? false,
       validFrom,
       validTo: validTo.trim() || null,
     };
@@ -468,6 +689,14 @@ function RelatedPartyDialog({
           <div>
             <label className="field-label" htmlFor="phone">Mobile Phone Number</label>
             <input id="phone" className="field-input" disabled={readOnly} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="08…" />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="share">Saham <span className="text-ink-muted">(opsional)</span></label>
+            <input id="share" className="field-input" disabled={readOnly} value={share} onChange={(e) => setShare(e.target.value)} placeholder="mis. 25%" />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="ubo">Kriteria Pemilik Manfaat <span className="text-ink-muted">(opsional)</span></label>
+            <input id="ubo" className="field-input" disabled={readOnly} value={ubo} onChange={(e) => setUbo(e.target.value)} />
           </div>
           <div>
             <label className="field-label" htmlFor="vf">Valid Dari</label>

@@ -14,7 +14,7 @@ import type {
  * dan tidak menimbulkan error saat dibaca komponen versi baru.
  */
 const PREFIX = 'edutax.uny.v1';
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 export interface Database {
   schemaVersion: number;

@@ -83,14 +83,27 @@ itu tidak dapat dikreditkan.
 ## Modul yang sudah selesai
 
 **Pihak Terkait & Penggantian PIC** (`/portal` → sidebar "Pihak Terkait", hanya
-untuk akun Badan) — mengikuti slide 23-33 apa adanya:
-- Tabel Pihak Terkait dengan aksi Edit/Hapus/Lihat, tombol Tambah membuka
-  dialog dengan dropdown Jenis Pihak Terkait (Related Person/Related
-  Taxpayer), checkbox "Apakah PIC?", dropdown Jenis Orang Terkait
-  (Direktur/Komisaris/Pemegang Saham/Wakil/Lainnya), field NIK/TIN yang
+untuk akun Badan) — mengikuti slide 23-33 dan screenshot revisi apa adanya:
+- Tabel Pihak Terkait dengan **seluruh 15 kolom** persis referensi (termasuk
+  yang baru terlihat setelah digulir ke kanan): Tindakan, NIK/NPWP Orang,
+  Jenis Wajib Pajak, Kategori Wajib Pajak, Nama Orang, Kewarganegaraan,
+  Nomor Paspor, Saham, Kriteria Pemilik Manfaat, Merupakan Orang Terkait,
+  Merupakan Wajib Pajak Terkait, Apakah Penanggung Jawab, Adalah Data
+  Eksternal, Valid Dari, Valid Sampai. "Jenis/Kategori Wajib Pajak" dan
+  "Merupakan Orang/Wajib Pajak Terkait" dihitung otomatis dari `kind`
+  (`taxpayerClassification()` di `types.ts`) — bukan input terpisah, karena
+  keduanya memang deskripsi klasifikasi pajak orangnya sendiri, berbeda dari
+  `role` (Direktur/Komisaris/dst., jabatannya di badan) yang tetap diisi di
+  dialog Tambah/Edit tapi tidak jadi kolom tabel, sesuai referensi.
+- "Adalah Data Eksternal" selalu tidak tercentang — pada Coretax asli kolom
+  ini menandai baris yang masuk lewat integrasi sistem lain, dan tidak ada
+  jalur seperti itu di simulasi ini.
+- Tombol Tambah membuka dialog dengan dropdown Jenis Pihak Terkait (Related
+  Person/Related Taxpayer), checkbox "Apakah PIC?", dropdown Jenis Orang
+  Terkait (Direktur/Komisaris/Pemegang Saham/Wakil/Lainnya), field NIK/TIN yang
   auto-mengisi Nama & Kewarganegaraan bila cocok dengan `Person` yang sudah
-  terdaftar di Manajemen Akses, serta Valid Dari (wajib) dan Valid Sampai
-  (opsional).
+  terdaftar di Manajemen Akses, Saham dan Kriteria Pemilik Manfaat (keduanya
+  opsional), serta Valid Dari (wajib) dan Valid Sampai (opsional).
 - **Hanya satu PIC per Badan ditegakkan lewat validasi, bukan auto-swap.**
   Mencentang "Apakah PIC?" pada pihak baru saat PIC lain masih aktif akan
   ditolak dengan pesan yang menuntun ke prosedur yang benar — lepas dulu
@@ -109,6 +122,56 @@ untuk akun Badan) — mengikuti slide 23-33 apa adanya:
   bahwa PIC "dapat mengelola seluruh fitur serta menandatangani semua
   permohonan". Ini berbeda dari PIC TKU (`Tku.picNiks`) yang hanya membatasi
   cakupan satu TKU, bukan akses penuh ke seluruh Badan.
+- **Tabel 15 kolom, sama persis urutan pada slide** (gulir ke kanan): Tindakan,
+  NIK/NPWP Orang, Jenis Wajib Pajak, Kategori Wajib Pajak, Nama Orang,
+  Kewarganegaraan, Nomor Paspor, Saham, Kriteria Pemilik Manfaat, Merupakan
+  Orang Terkait, Merupakan Wajib Pajak Terkait, Apakah Penanggung Jawab,
+  Adalah Data Eksternal, Valid Dari, Valid Sampai. Empat kolom boolean terakhir
+  dirender sebagai kotak centang biru kecil (`CheckboxCell`), bukan teks atau
+  badge, supaya visualnya sama persis dengan screenshot. "Jenis/Kategori Wajib
+  Pajak" dihitung dari `kind` lewat `taxpayerClassification()` — ini
+  klasifikasi status pajak orangnya sendiri, berbeda dari `role`
+  (Direktur/Komisaris/dst.) yang merupakan jabatannya di badan.
+- "Saham" dan "Kriteria Pemilik Manfaat" tidak muncul sebagai input pada
+  dialog Tambah di slide 30, jadi diperlakukan sebagai field opsional bebas
+  isi (default kosong) alih-alih dipaksa mengikuti aturan bisnis yang tidak
+  didokumentasikan. "Adalah Data Eksternal" tidak diekspos sebagai input
+  sama sekali — di Coretax asli kolom itu menandai baris yang masuk lewat
+  integrasi sistem lain (mis. AHU Online), bukan diketik manual.
+
+**Informasi Umum Wajib Pajak** (`/portal` → sidebar "Informasi Umum") — dua
+sub-tab General dan Taxpayer Flags mengikuti slide 24/28 apa adanya: kolom
+kiri (NPWP, Nama, Jenis & Kategori Wajib Pajak, Tanggal Pendaftaran/Aktivasi,
+Status) dan kolom kanan berisi 11 Taxpayer Flags dengan tanda centang/silang
+hijau-merah, plus Bahasa/Kantor Wilayah/Kantor Pelayanan Pajak/kontak utama.
+Contoh asli DJP pada slide kebetulan berupa Instansi Pemerintah, sedangkan
+Badan contoh aplikasi ini adalah PT swasta — label "Kategori Institusi
+Pemerintah" diganti "Kategori Wajib Pajak" karena field itu tidak relevan
+untuk badan usaha biasa, dan nilai-nilai flag disesuaikan dengan wajar untuk
+perusahaan dagang biasa, dijelaskan lewat catatan kaki di halaman itu sendiri.
+Main Account (Orang Pribadi) mendapat versi ringkas tanpa Taxpayer Flags,
+karena flag-flag tersebut (faktur pajak, PPN, dst.) memang konsep khusus
+Badan. Tombol Edit belum berfungsi (menampilkan pesan "tahap pengembangan
+berikutnya") karena slide yang tersedia belum mendokumentasikan alur edit-nya.
+
+**Informasi Umum Wajib Pajak** (`/portal` → sidebar "Informasi Umum") —
+struktur & label mengikuti screenshot revisi apa adanya: tombol Edit, sub-tab
+General/Taxpayer Flags, kolom kiri (NPWP, Kode Unit Kerja, Nama, Jenis Wajib
+Pajak, Kategori Wajib Pajak, Tanggal Pendaftaran, Tanggal Aktivasi, Status)
+dan kolom kanan (11 Taxpayer Flags dengan ikon ✓/✕, Bahasa, Kantor Wilayah,
+Kantor Pelayanan Pajak, kontak utama). **Isinya disesuaikan konteks**, bukan
+disalin literal — contoh asli DJP kebetulan berupa Instansi Pemerintah
+("Kategori Institusi Pemerintah", flag PPN eCommerce, dsb.), sementara Badan
+seed aplikasi ini ("PT Karya Mandiri Sejahtera") adalah PT swasta biasa,
+sehingga field itu diganti padanan yang relevan ("Kategori Wajib Pajak") dan
+dicatat jelas di footnote halaman. Untuk Main Account (RAKA), flag-flag itu
+disembunyikan dengan penjelasan karena memang tidak berlaku untuk Orang
+Pribadi. Sidebar "Informasi Rincian" juga diperbaiki jadi 17 item persis
+screenshot (sebelumnya keliru menyertakan "Kewajiban Perpajakan" yang
+ternyata tidak ada di referensi, dan melewatkan "Nomor Identifikasi
+Eksternal"/"Jenis Pajak"), plus dua pintasan ("Wakil/Kuasa Saya", "Wajib
+Pajak yang Diwakili") yang tampil di atas daftar utama — sengaja muncul dua
+kali karena begitu pula tampilan aslinya, bukan duplikasi yang salah ketik.
 
 **Perbaikan tampilan (font & header).** Font Poppins sempat tidak kepakai di
 sebagian environment (tampil sebagai serif bawaan browser) karena hanya

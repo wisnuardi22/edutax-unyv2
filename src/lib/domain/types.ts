@@ -231,8 +231,32 @@ export interface RelatedParty {
   email: string;
   phone: string;
   passportNumber: string;
+  /** Persentase saham, string bebas ("0", "25%", atau kosong) — opsional. */
+  sharePercentage: string;
+  /** Kriteria Pemilik Manfaat (beneficial owner), opsional, kosong bila tak berlaku. */
+  beneficialOwnerCriteria: string;
   /** "Apakah Penanggung Jawab" — hanya satu yang boleh true per Badan. */
   isPic: boolean;
+  /**
+   * Selalu false di praktikum ini: kolom "Adalah Data Eksternal" pada
+   * Coretax asli menandai baris yang masuk lewat integrasi sistem lain
+   * (mis. AHU Online), bukan diketik manual — tidak ada jalur seperti itu
+   * di simulasi ini, jadi field ini tidak diekspos sebagai input pengguna.
+   */
+  isExternalData: boolean;
   validFrom: string;  // dd-mm-yyyy
   validTo: string | null;
+}
+
+/**
+ * "Jenis Wajib Pajak" dan "Kategori Wajib Pajak" pada kolom tabel Pihak
+ * Terkait (slide gambar ke-2/3 revisi) adalah klasifikasi status pajak orang
+ * itu SENDIRI — bukan jabatannya di badan (itu `role`, dua konsep berbeda
+ * yang orthogonal). Untuk Related Person nilainya selalu sama, sesuai
+ * screenshot; untuk Related Taxpayer memakai klasifikasi badan.
+ */
+export function taxpayerClassification(kind: RelatedPartyKind): { jenis: string; kategori: string } {
+  return kind === 'RELATED_PERSON'
+    ? { jenis: 'Orang Pribadi atau Warisan Belum Terbagi', kategori: 'Orang Pribadi' }
+    : { jenis: 'Badan', kategori: 'Dalam Negeri' };
 }

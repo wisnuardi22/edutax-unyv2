@@ -75,6 +75,15 @@ export const PORTAL_NAV_MENU: { label: string; href: string }[] = [
 ];
 
 /** Sidebar "Informasi Rincian" di halaman Taxpayer 360, persis slide 15-16. */
+/**
+ * Sidebar "Informasi Rincian" di halaman Taxpayer 360, urutan dan daftar
+ * persis screenshot revisi (gabungan gambar 1 dan 2): 17 item, tanpa
+ * "Kewajiban Perpajakan" yang sempat salah saya masukkan sebelumnya —
+ * sebagai gantinya ada "Nomor Identifikasi Eksternal" dan "Jenis Pajak".
+ * "Wakil/Kuasa Saya" dan "Wajib Pajak yang Diwakili" sengaja muncul lagi di
+ * sini meski juga tampil sebagai pintasan di atas — itu memang begitu pada
+ * screenshot aslinya, bukan duplikasi yang salah ketik.
+ */
 export const INFORMASI_RINCIAN_MENU = [
   { key: 'ikhtisar', label: 'Ikhtisar Profil Wajib Pajak' },
   { key: 'informasi-umum', label: 'Informasi Umum' },
@@ -84,15 +93,24 @@ export const INFORMASI_RINCIAN_MENU = [
   { key: 'pbb', label: 'Objek Pajak Bumi dan Bangunan (PBB)' },
   { key: 'klu', label: 'Klasifikasi Lapangan Usaha (KLU)' },
   { key: 'detail-bank', label: 'Detail Bank' },
-  { key: 'unit-keluarga', label: 'Unit Keluarga untuk Kepentingan Perpajakan' },
+  { key: 'unit-keluarga', label: 'Data Unit Keluarga' },
   { key: 'tku', label: 'Tempat Kegiatan Usaha/Sub Unit' },
-  { key: 'kewajiban', label: 'Kewajiban Perpajakan' },
-  { key: 'wakil-kuasa', label: 'Wakil/Kuasa' },
-  { key: 'wp-diwakili', label: 'Wajib Pajak yang Diwakili/Dikuasakan' },
+  { key: 'nomor-id-eksternal', label: 'Nomor Identifikasi Eksternal' },
+  { key: 'jenis-pajak', label: 'Jenis Pajak' },
+  { key: 'wakil-kuasa', label: 'Wakil/Kuasa Saya' },
+  { key: 'wp-diwakili', label: 'Wajib Pajak yang Diwakili' },
   { key: 'verifikasi-2fa', label: 'Verifikasi Dua Langkah' },
   { key: 'permohonan-tertunda', label: 'Permohonan Tertunda' },
   { key: 'semua-permohonan', label: 'Semua Permohonan' },
 ] as const;
+
+/**
+ * Dua pintasan yang tampil DI ATAS "Informasi Detail" pada sidebar, persis
+ * screenshot — merujuk key yang sama dengan item di dalam
+ * `INFORMASI_RINCIAN_MENU` (bukan tab terpisah), karena memang konten yang
+ * dituju sama persis.
+ */
+export const PROFIL_SHORTCUT_KEYS = ['wakil-kuasa', 'wp-diwakili'] as const;
 
 export interface Profile360 {
   name: string;
