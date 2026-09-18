@@ -403,29 +403,9 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
 
 export function RoleSection({ entityTin }: { entityTin: string }) {
   const { db, mutate } = useDb();
-  const [nik, setNik] = useState('');
-  const [scope, setScope] = useState<string>('PUSAT');
-  const [picked, setPicked] = useState<RoleCode[]>([]);
+  const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const tkus = db.tkus.filter((t) => t.entityTin === entityTin);
   const assignments = db.roleAssignments.filter((a) => a.entityTin === entityTin);
-
-  function assign() {
-    if (!nik || picked.length === 0) return;
-    mutate((d) => {
-      for (const role of picked) {
-        const scopeNitku = scope === 'PUSAT' ? null : scope;
-        const exists = d.roleAssignments.some(
-          (a) => a.personNik === nik && a.entityTin === entityTin && a.role === role && a.scopeNitku === scopeNitku,
-        );
-        if (exists) continue;
-        d.roleAssignments.push({
-          id: crypto.randomUUID(), personNik: nik, entityTin, role, scopeNitku,
-        });
-        addAuditEvent(d, 'Menetapkan Role', `${nik} - ${role} - ${scopeNitku ?? 'CENTRAL'}`);
-      }
-    });
-    setPicked([]);
-  }
 
   function revoke(id: string) {
     mutate((d) => {
@@ -433,106 +413,164 @@ export function RoleSection({ entityTin }: { entityTin: string }) {
     });
   }
 
-  const nameOf = (n: string) => db.persons.find((p) => p.nik === n)?.nama ?? n;
+  const relatedPeople = db.relatedParties
+    .filter((party) => party.entityTin === entityTin)
+    .map((party) => ({ nik: party.personNik, name: party.personName }));
+  const people = [...new Map([
+    ...relatedPeople,
+    ...assignments.map((assignment) => ({ nik: assignment.personNik, name: db.persons.find((person) => person.nik === assignment.personNik)?.nama ?? assignment.personNik })),
+  ].map((person) => [person.nik, person])).values()];
 
   return (
-    <>
-      <section className="rounded-card bg-white p-5 shadow-card">
-        <h1 className="font-semibold">Wakil/Kuasa Saya</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Cakupan pusat melihat dokumen seluruh TKU untuk jenis pajak yang sama. Cakupan satu TKU
-          hanya melihat dokumen TKU tersebut.
-        </p>
+    <section className="rounded-card bg-white p-5 shadow-card">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">Perwakilan Saya</h1>
+          <p className="mt-1 text-[13px] text-ink-muted">Tetapkan satu atau lebih role akses untuk setiap pegawai yang telah didaftarkan.</p>
+        </div>
+        <button className="btn-primary shrink-0" onClick={() => setSelectedPerson(null)}>+ New Representative</button>
+      </div>
 
-        <table className="data-table mt-4">
+      <div className="mt-4 flex gap-2 border-b border-line pb-3">
+        <button className="rounded-md bg-brand-50 p-2 text-brand-800" title="Muat ulang">↻</button>
+        <button className="rounded-md bg-zinc-600 p-2 text-white" title="Ekspor">▣</button>
+        <button className="rounded-md bg-good p-2 text-white" title="Ekspor Excel">▤</button>
+        <button className="rounded-md bg-bad p-2 text-white" title="Ekspor PDF">▧</button>
+      </div>
+
+      <div className="mt-3 overflow-x-auto">
+        <table className="data-table min-w-[900px]">
           <thead>
             <tr>
-              <th>Orang</th>
-              <th>Role</th>
-              <th>Cakupan</th>
-              <th className="w-24">Aksi</th>
+              <th>Permintaan Terbuka</th>
+              <th>NPWP</th>
+              <th>Nama</th>
+              <th>Jenis Perwakilan</th>
+              <th>ID Penunjukan Perwakilan</th>
+              <th>Nomor Dokumen Penunjukan Perwakilan</th>
+              <th>Izin Perwakilan</th>
             </tr>
           </thead>
           <tbody>
-            {assignments.length === 0 && (
+            {people.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-ink-muted">
-                  Belum ada role yang ditetapkan.
+                <td colSpan={7} className="py-8 text-center text-ink-muted">
+                  Belum ada pegawai yang terdaftar. Tambahkan Related Person terlebih dahulu.
                 </td>
               </tr>
             )}
-            {assignments.map((a) => (
-              <tr key={a.id}>
-                <td>{nameOf(a.personNik)}</td>
+            {people.map((person) => {
+              const personAssignments = assignments.filter((assignment) => assignment.personNik === person.nik);
+              return (
+              <tr key={person.nik}>
                 <td>
-                  <span className="block font-mono text-xxs text-ink-muted">{a.role}</span>
-                  {ROLE_LABELS[a.role]}
+                  <div className="flex flex-wrap gap-1">
+                    {personAssignments.map((assignment) => (
+                      <button key={assignment.id} className="text-[11px] text-bad hover:underline" onClick={() => revoke(assignment.id)}>
+                        Revoke
+                      </button>
+                    ))}
+                    <button className="rounded bg-brand-800 px-2 py-1 text-[11px] text-white" onClick={() => setSelectedPerson(person.nik)}>
+                      Tetapkan Role
+                    </button>
+                  </div>
                 </td>
-                <td className="font-mono text-[13px]">{a.scopeNitku ?? 'Pusat — seluruh TKU'}</td>
-                <td>
-                  <button className="text-[13px] text-bad hover:underline" onClick={() => revoke(a.id)}>
-                    Cabut
-                  </button>
-                </td>
+                <td className="font-mono">{person.nik}</td>
+                <td>{person.name}</td>
+                <td>{personAssignments.length ? 'Wakil/Pegawai' : 'Belum ditetapkan'}</td>
+                <td className="font-mono text-xs">{personAssignments.length ? `DA${person.nik.slice(-8)}` : '—'}</td>
+                <td>—</td>
+                <td>{personAssignments.length ? 'License' : '—'}</td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
-      </section>
+      </div>
 
-      <section className="rounded-card bg-white p-5 shadow-card">
-        <h2 className="font-semibold">Tetapkan role</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <div>
-            <label className="field-label" htmlFor="rp">Orang</label>
-            <select id="rp" className="field-input" value={nik} onChange={(e) => setNik(e.target.value)}>
-              <option value="">Pilih orang…</option>
-              {db.persons.map((p) => (
-                <option key={p.nik} value={p.nik}>{p.nama || p.nik}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="field-label" htmlFor="rs">Cakupan</label>
-            <select id="rs" className="field-input" value={scope} onChange={(e) => setScope(e.target.value)}>
-              <option value="PUSAT">Pihak terkait pusat — seluruh TKU</option>
-              {tkus.filter((t) => !t.nitku.endsWith('000000')).map((t) => (
-                <option key={t.nitku} value={t.nitku}>PIC TKU {t.nitku} — {t.nama}</option>
-              ))}
-            </select>
-          </div>
+      {selectedPerson !== null && (
+        <RoleAssignmentDialog
+          entityTin={entityTin}
+          personNik={selectedPerson}
+          tkus={tkus}
+          assignments={assignments}
+          onCancel={() => setSelectedPerson(null)}
+          onSave={(picked, scope) => {
+            mutate((d) => {
+              const scopeNitku = scope === 'PUSAT' ? null : scope;
+              d.roleAssignments = d.roleAssignments.filter((assignment) => !(assignment.entityTin === entityTin && assignment.personNik === selectedPerson && assignment.scopeNitku === scopeNitku));
+              picked.forEach((role) => {
+                d.roleAssignments.push({ id: crypto.randomUUID(), personNik: selectedPerson, entityTin, role, scopeNitku });
+                addAuditEvent(d, 'Menetapkan Role', `${selectedPerson} - ${role} - ${scopeNitku ?? 'CENTRAL'}`);
+              });
+            });
+            setSelectedPerson(null);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+function RoleAssignmentDialog({
+  entityTin,
+  personNik,
+  tkus,
+  assignments,
+  onCancel,
+  onSave,
+}: {
+  entityTin: string;
+  personNik: string;
+  tkus: { nitku: string; nama: string }[];
+  assignments: { personNik: string; role: RoleCode; scopeNitku: string | null }[];
+  onCancel: () => void;
+  onSave: (roles: RoleCode[], scope: string) => void;
+}) {
+  const existing = assignments.filter((assignment) => assignment.personNik === personNik);
+  const [scope, setScope] = useState(existing[0]?.scopeNitku ?? 'PUSAT');
+  const [picked, setPicked] = useState<RoleCode[]>(existing.filter((assignment) => (assignment.scopeNitku ?? 'PUSAT') === scope).map((assignment) => assignment.role));
+  const name = useDb().db.persons.find((person) => person.nik === personNik)?.nama ?? personNik;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/50 p-4">
+      <div className="max-h-[85vh] w-full max-w-4xl overflow-y-auto rounded-card bg-white p-5 shadow-card">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-brand-900">Tetapkan Role</h2>
+          <button className="text-xl text-ink-muted" onClick={onCancel} aria-label="Tutup">×</button>
         </div>
-
-        <div className="mt-4 space-y-3">
-          {ROLE_GROUPS.map((g) => (
-            <fieldset key={g.key} className="rounded-md border border-line p-3">
-              <legend className="px-1 text-[13px] font-semibold text-brand-800">{g.label}</legend>
-              <div className="grid gap-1.5 md:grid-cols-2">
-                {g.roles.map((r) => (
-                  <label key={r} className="flex items-start gap-2 text-[13px]">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5"
-                      checked={picked.includes(r)}
-                      onChange={(e) =>
-                        setPicked((s) => (e.target.checked ? [...s, r] : s.filter((x) => x !== r)))
-                      }
-                    />
-                    <span>
-                      {ROLE_LABELS[r]}
-                      <span className="block font-mono text-xxs text-ink-muted">{r}</span>
-                    </span>
+        <p className="mt-1 text-[13px] text-ink-muted">{name} ({personNik})</p>
+        <div className="mt-4 max-w-sm">
+          <label className="field-label" htmlFor="role-scope">Cakupan Role</label>
+          <select id="role-scope" className="field-input" value={scope} onChange={(event) => {
+            const nextScope = event.target.value;
+            setScope(nextScope);
+            setPicked(existing.filter((assignment) => (assignment.scopeNitku ?? 'PUSAT') === nextScope).map((assignment) => assignment.role));
+          }}>
+            <option value="PUSAT">Pihak terkait pusat — seluruh TKU</option>
+            {tkus.filter((tku) => !tku.nitku.endsWith('000000')).map((tku) => <option key={tku.nitku} value={tku.nitku}>PIC TKU {tku.nitku} — {tku.nama}</option>)}
+          </select>
+        </div>
+        <div className="mt-4 grid gap-3 lg:grid-cols-2">
+          {ROLE_GROUPS.map((group) => (
+            <fieldset key={group.key} className="rounded-md border border-line p-3">
+              <legend className="px-1 text-[13px] font-semibold text-brand-800">{group.label}</legend>
+              <div className="space-y-2">
+                {group.roles.map((role) => (
+                  <label key={role} className="flex items-start gap-2 text-[13px]">
+                    <input type="checkbox" className="mt-0.5" checked={picked.includes(role)} onChange={(event) => setPicked((current) => event.target.checked ? [...current, role] : current.filter((item) => item !== role))} />
+                    <span>{ROLE_LABELS[role]}<span className="block break-all font-mono text-xxs text-ink-muted">{role}</span></span>
                   </label>
                 ))}
               </div>
             </fieldset>
           ))}
         </div>
-
-        <button className="btn-primary mt-4" onClick={assign} disabled={!nik || picked.length === 0}>
-          Tetapkan role
-        </button>
-      </section>
-    </>
+        <div className="mt-5 flex justify-start gap-2">
+          <button className="btn-primary" onClick={() => onSave(picked, scope)}>Simpan</button>
+          <button className="btn-secondary" onClick={onCancel}>Batal</button>
+        </div>
+      </div>
+    </div>
   );
 }
