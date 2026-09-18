@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
@@ -96,32 +96,13 @@ export default function PortalPage() {
       </aside>
 
       <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
-        {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
-        {tab === 'informasi-umum' && (
-          <InformationDashboard
-            entity={activeEntity ?? null}
-            session={session}
-            relatedParties={db.relatedParties}
-          />
-        )}
-        {tab === 'pihak-terkait' && (
-          <PihakTerkaitSection
-            key={activeEntity?.tin ?? 'main'}
-            entityTin={activeEntity?.tin ?? null}
-          />
-        )}
-        {tab === 'wakil-kuasa' && activeEntity ? (
-          <RoleSection entityTin={activeEntity.tin} />
-        ) : tab === 'wakil-kuasa' ? (
-          <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />
-        ) : null}
-        {tab === 'tku' && <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />}
-        {tab !== 'ikhtisar' && tab !== 'informasi-umum' && tab !== 'pihak-terkait' && tab !== 'wakil-kuasa' && tab !== 'tku' && (
-          <BelumTersedia
-            judul={INFORMASI_RINCIAN_MENU.find((m) => m.key === tab)!.label}
-            tahap="tahap pengembangan berikutnya"
-          />
-        )}
+        <InformationDashboard
+          activeTab={tab}
+          onSelect={setTab}
+          entity={activeEntity ?? null}
+          session={session}
+          relatedParties={db.relatedParties}
+        />
       </section>
     </div>
   );
@@ -182,51 +163,50 @@ function SidebarAccordion({
 }
 
 function InformationDashboard({
+  activeTab,
+  onSelect,
   entity,
   session,
   relatedParties,
 }: {
+  activeTab: string;
+  onSelect: (key: string) => void;
   entity: { tin: string; name: string; address: string } | null;
   session: { personNik: string; personName: string };
   relatedParties: RelatedParty[];
 }) {
-  const [openSection, setOpenSection] = useState('informasi-umum');
+  const [openSection, setOpenSection] = useState(activeTab);
+
+  useEffect(() => {
+    setOpenSection(activeTab);
+  }, [activeTab]);
+
+  function toggleSection(key: string) {
+    setOpenSection((section) => section === key ? '' : key);
+    onSelect(key);
+  }
+
+  function contentFor(key: string) {
+    if (key === 'ikhtisar') return <TaxpayerOverview profile={entity ? profileForEntity(entity.tin, entity.name, entity.address) : profileForMainAccount(session.personNik, session.personName)} />;
+    if (key === 'informasi-umum') return <InformasiUmumSection entity={entity} session={session} relatedParties={relatedParties} onEdit={() => toggleSection('pihak-terkait')} />;
+    if (key === 'pihak-terkait') return <PihakTerkaitSection key={entity?.tin ?? 'main'} entityTin={entity?.tin ?? null} />;
+    if (key === 'wakil-kuasa') return entity ? <RoleSection entityTin={entity.tin} /> : <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />;
+    if (key === 'tku') return <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />;
+    return <BelumTersedia judul={INFORMASI_RINCIAN_MENU.find((item) => item.key === key)?.label ?? key} tahap="tahap pengembangan berikutnya" />;
+  }
 
   return (
     <div className="space-y-3">
-      <PageAccordion
-        title="Informasi Umum"
-        open={openSection === 'informasi-umum'}
-        onToggle={() => setOpenSection((section) => section === 'informasi-umum' ? '' : 'informasi-umum')}
-      >
-        <InformasiUmumSection
-          entity={entity}
-          session={session}
-          relatedParties={relatedParties}
-          onEdit={() => setOpenSection('pihak-terkait')}
-        />
-      </PageAccordion>
-      <PageAccordion
-        title="Detail Kontak"
-        open={openSection === 'detail-kontak'}
-        onToggle={() => setOpenSection((section) => section === 'detail-kontak' ? '' : 'detail-kontak')}
-      >
-        <p className="text-[13px] text-ink-muted">Detail kontak akan ditampilkan dalam tahap berikutnya.</p>
-      </PageAccordion>
-      <PageAccordion
-        title="Pihak Terkait"
-        open={openSection === 'pihak-terkait'}
-        onToggle={() => setOpenSection((section) => section === 'pihak-terkait' ? '' : 'pihak-terkait')}
-      >
-        <PihakTerkaitSection entityTin={entity?.tin ?? null} />
-      </PageAccordion>
-      <PageAccordion
-        title="Tempat Kegiatan Usaha/Sub Unit"
-        open={openSection === 'tku'}
-        onToggle={() => setOpenSection((section) => section === 'tku' ? '' : 'tku')}
-      >
-        <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />
-      </PageAccordion>
+      {INFORMASI_RINCIAN_MENU.map((item) => (
+        <PageAccordion
+          key={item.key}
+          title={item.label}
+          open={openSection === item.key}
+          onToggle={() => toggleSection(item.key)}
+        >
+          {contentFor(item.key)}
+        </PageAccordion>
+      ))}
     </div>
   );
 }
