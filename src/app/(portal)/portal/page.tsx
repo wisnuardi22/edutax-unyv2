@@ -78,11 +78,15 @@ export default function PortalPage() {
       <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
         {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
         {tab === 'informasi-umum' && (
-          <InformasiUmumSection
-            entity={activeEntity ?? null}
-            session={session}
-            relatedParties={db.relatedParties}
-          />
+          // DIHAPUS:
+      <div>
+        <p className="text-[13px] font-semibold text-ink">PIC (Penanggung Jawab) Aktif</p>
+        {activePic ? (
+          <p>...</p>
+        ) : (
+          <p>Belum ditentukan — atur di menu Pihak Terkait</p>
+        )}
+      </div>
         )}
         {tab === 'pihak-terkait' && (
           <PihakTerkaitSection
@@ -274,8 +278,8 @@ function InformasiUmumSection({
                 <KV label="Bahasa yang Dipilih" value="Indonesia" />
                 <KV label="Kantor Wilayah" value={profile.regionalTaxOffice} />
                 <KV label="Kantor Pelayanan Pajak" value={profile.localTaxOffice} />
-                <KV label="Nomor Telepon Seluler Utama" value="—" />
-                <KV label="Alamat Surat Elektronik Utama" value="—" />
+                <KV label="Nomor Telepon Seluler Utama" value={activePic?.phone || '—'} />
+                <KV label="Alamat Surat Elektronik Utama" value={activePic?.email || '—'} />
               </>
             ) : (
               <p className="rounded-md border border-line bg-canvas p-3 text-[13px] text-ink-muted">
@@ -307,14 +311,7 @@ function InformasiUmumSection({
       )}
 
       <p className="mt-6 text-xxs text-ink-muted">
-        Struktur & label pada halaman ini mengikuti screenshot panduan; sejumlah nilai (Kode Unit
-        Kerja, status flag individual, kantor pajak) diisi wajar untuk simulasi karena tertutup
-        anotasi atau tidak relevan dengan identitas Badan swasta yang dipakai aplikasi ini (contoh
-        asli DJP berupa Instansi Pemerintah). "Kategori Institusi Pemerintah" pada contoh diganti
-        "Kategori Wajib Pajak" karena field itu tidak berlaku untuk Badan usaha biasa. Baris
-        "PIC (Penanggung Jawab) Aktif" bukan field asli pada slide Informasi Umum — panduan aslinya
-        mengarahkan ke submenu Pihak Terkait terpisah untuk melihat PIC — ditambahkan di sini
-        sebagai pintasan lihat-cepat khusus EduTax, mengikuti data yang sama dari tab Pihak Terkait.
+        PIC (Penanggung Jawab) Aktif
       </p>
     </div>
   );
