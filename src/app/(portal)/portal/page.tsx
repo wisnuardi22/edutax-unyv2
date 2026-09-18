@@ -98,7 +98,7 @@ export default function PortalPage() {
       <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
         {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
         {tab === 'informasi-umum' && (
-          <InformasiUmumSection
+          <InformationDashboard
             entity={activeEntity ?? null}
             session={session}
             relatedParties={db.relatedParties}
@@ -181,6 +181,83 @@ function SidebarAccordion({
   );
 }
 
+function InformationDashboard({
+  entity,
+  session,
+  relatedParties,
+}: {
+  entity: { tin: string; name: string; address: string } | null;
+  session: { personNik: string; personName: string };
+  relatedParties: RelatedParty[];
+}) {
+  const [openSection, setOpenSection] = useState('informasi-umum');
+
+  return (
+    <div className="space-y-3">
+      <PageAccordion
+        title="Informasi Umum"
+        open={openSection === 'informasi-umum'}
+        onToggle={() => setOpenSection((section) => section === 'informasi-umum' ? '' : 'informasi-umum')}
+      >
+        <InformasiUmumSection
+          entity={entity}
+          session={session}
+          relatedParties={relatedParties}
+          onEdit={() => setOpenSection('pihak-terkait')}
+        />
+      </PageAccordion>
+      <PageAccordion
+        title="Detail Kontak"
+        open={openSection === 'detail-kontak'}
+        onToggle={() => setOpenSection((section) => section === 'detail-kontak' ? '' : 'detail-kontak')}
+      >
+        <p className="text-[13px] text-ink-muted">Detail kontak akan ditampilkan dalam tahap berikutnya.</p>
+      </PageAccordion>
+      <PageAccordion
+        title="Pihak Terkait"
+        open={openSection === 'pihak-terkait'}
+        onToggle={() => setOpenSection((section) => section === 'pihak-terkait' ? '' : 'pihak-terkait')}
+      >
+        <PihakTerkaitSection entityTin={entity?.tin ?? null} />
+      </PageAccordion>
+      <PageAccordion
+        title="Tempat Kegiatan Usaha/Sub Unit"
+        open={openSection === 'tku'}
+        onToggle={() => setOpenSection((section) => section === 'tku' ? '' : 'tku')}
+      >
+        <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />
+      </PageAccordion>
+    </div>
+  );
+}
+
+function PageAccordion({
+  title,
+  open,
+  onToggle,
+  children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-md border border-line bg-white">
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className={`flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold ${open ? 'bg-brand-50 text-brand-800' : 'bg-[#F6F8FA] text-ink'}`}
+      >
+        {open ? <ChevronDown size={17} /> : <ChevronRight size={17} />}
+        <span>{title}</span>
+      </button>
+      {open && <div className="border-t border-line p-5">{children}</div>}
+    </section>
+  );
+}
+
 function TaxpayerOverview({ profile }: { profile: Profile360 }) {
   return (
     <div id="pihak-terkait-content">
@@ -246,13 +323,14 @@ function InformasiUmumSection({
   entity,
   session,
   relatedParties,
+  onEdit,
 }: {
   entity: { tin: string; name: string; address: string } | null;
   session: { personNik: string; personName: string };
   relatedParties: RelatedParty[];
+  onEdit: () => void;
 }) {
   const [subTab, setSubTab] = useState<'general' | 'flags'>('general');
-  const [editMode, setEditMode] = useState(false);
 
   const isBadan = !!entity;
   const profile = isBadan
@@ -285,9 +363,9 @@ function InformasiUmumSection({
         <h1 className="text-lg font-semibold">Informasi Umum Wajib Pajak</h1>
         <button
           className="btn-primary shrink-0"
-          onClick={() => setEditMode((value) => !value)}
+          onClick={onEdit}
         >
-          {editMode ? 'Tutup Edit' : 'Edit'}
+          Edit
         </button>
       </div>
 
@@ -366,18 +444,6 @@ function InformasiUmumSection({
             </p>
           )}
         </div>
-      )}
-
-      {editMode && (
-        <section id="pihak-terkait-editor" className="mt-8 border-t border-line pt-6">
-          <div className="mb-4">
-            <h2 className="text-base font-semibold text-ink">Edit Informasi Umum</h2>
-            <p className="mt-1 text-[13px] text-ink-muted">
-              Gulir ke bagian Pihak Terkait, lalu pilih Tambah untuk mendaftarkan pegawai sesuai alur panduan Coretax.
-            </p>
-          </div>
-          <PihakTerkaitSection entityTin={entity?.tin ?? null} />
-        </section>
       )}
 
     </div>
