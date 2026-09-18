@@ -78,14 +78,11 @@ export default function PortalPage() {
       <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
         {tab === 'ikhtisar' && <TaxpayerOverview profile={profile} />}
         {tab === 'informasi-umum' && (
-        <div>
-          <p className="text-[13px] font-semibold text-ink">PIC (Penanggung Jawab) Aktif</p>
-          {activePic ? (
-            <p>...</p>
-          ) : (
-            <p>Belum ditentukan — atur di menu Pihak Terkait</p>
-          )}
-        </div>
+          <InformasiUmumSection
+            entity={activeEntity ?? null}
+            session={session}
+            relatedParties={db.relatedParties}
+          />
         )}
         {tab === 'pihak-terkait' && (
           <PihakTerkaitSection
