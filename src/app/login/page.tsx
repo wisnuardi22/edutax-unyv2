@@ -82,22 +82,22 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <div className="grid w-full max-w-[600px] overflow-hidden rounded-card bg-white shadow-card md:h-[500px] md:grid-cols-2">
+      <div className="grid w-full max-w-[700px] overflow-hidden rounded-card bg-white shadow-card md:h-[500px] md:grid-cols-2">
         {/* Kolom formulir */}
-        <section className="overflow-y-auto p-4 sm:p-5 md:p-5">
-          <h1 className="text-[22px] font-semibold leading-tight text-ink">Login</h1>
-          <p className="mt-1 text-xs font-semibold tracking-wide text-brand-600">
+        <section className="overflow-hidden p-4 sm:p-5 md:p-5">
+          <h1 className="text-xl font-semibold leading-tight text-ink">Login</h1>
+          <p className="mt-0.5 text-[10px] font-semibold tracking-wide text-brand-600">
             Tahap 1 — Modul Role Akses
           </p>
 
-          <div className="mt-3 space-y-2.5">
+          <div className="mt-2.5 space-y-2">
             <div>
-              <label className="field-label !mb-1 text-xs" htmlFor="userId">
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="userId">
                 ID Pengguna <span className="text-bad">*</span>
               </label>
               <input
                 id="userId"
-                className="field-input !py-1.5 text-xs"
+                className="field-input !py-1 text-[11px]"
                 placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
@@ -106,14 +106,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="field-label !mb-1 text-xs" htmlFor="password">
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="password">
                 Kata Sandi <span className="text-bad">*</span>
               </label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPass ? 'text' : 'password'}
-                  className="field-input !py-1.5 pr-10 text-xs"
+                  className="field-input !py-1 pr-10 text-[11px]"
                   placeholder="Masukan Kata Sandi ID Pengguna Anda"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -132,34 +132,34 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="field-label !mb-1 text-xs" htmlFor="lang">
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="lang">
                 Pemilihan Bahasa
               </label>
-              <select id="lang" className="field-input !py-1.5 text-xs" defaultValue="id">
+              <select id="lang" className="field-input !py-1 text-[11px]" defaultValue="id">
                 <option value="id">id-ID — Bahasa Indonesia</option>
                 <option value="en">en-US — English</option>
               </select>
             </div>
 
             <div>
-              <label className="field-label !mb-1 text-xs" htmlFor="captcha">
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="captcha">
                 Kode Keamanan <span className="text-bad">*</span>
               </label>
               <div className="flex items-center gap-2">
-                <output className="select-none rounded-md border border-line bg-[repeating-linear-gradient(135deg,#EDF1F6_0_6px,#FFFFFF_6px_12px)] px-2.5 py-1.5 text-xs font-semibold tracking-[0.25em] text-ink">
+                <output className="select-none rounded-md border border-line bg-[repeating-linear-gradient(135deg,#EDF1F6_0_6px,#FFFFFF_6px_12px)] px-2 py-1 text-[11px] font-semibold tracking-[0.2em] text-ink">
                   {captcha}
                 </output>
                 <button
                   type="button"
                   onClick={refreshCaptcha}
-                  className="rounded-md border border-line p-1.5 text-ink-muted hover:text-brand-600"
+                  className="rounded-md border border-line p-1 text-ink-muted hover:text-brand-600"
                   aria-label="Ganti kode keamanan"
                 >
                   <RefreshCw size={16} />
                 </button>
                 <input
                   id="captcha"
-                  className="field-input !py-1.5 flex-1 text-xs"
+                  className="field-input !py-1 flex-1 text-[11px]"
                   placeholder="Masukkan Captcha"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
@@ -168,35 +168,35 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <a className="inline-block text-xs text-brand-500 hover:underline" href="#">
+            <a className="inline-block text-[11px] text-brand-500 hover:underline" href="#">
               Lupa Kata Sandi?
             </a>
 
             {error && (
-              <p role="alert" className="rounded-md bg-bad/10 px-2 py-1.5 text-xs text-bad">
+              <p role="alert" className="rounded-md bg-bad/10 px-2 py-1 text-[11px] text-bad">
                 {error}
               </p>
             )}
 
-            <button type="button" className="btn-primary !py-2 w-full" onClick={handleLogin}>
+            <button type="button" className="btn-primary !py-1.5 w-full text-xs" onClick={handleLogin}>
               Login
             </button>
 
-            <p className="text-center text-xs text-ink-muted">
+            <p className="text-center text-[11px] text-ink-muted">
               Pengguna Baru?{' '}
               <a className="text-brand-500 hover:underline" href="#">
                 Daftar disini
               </a>
             </p>
-            <p className="text-center text-xs">
+            <p className="text-center text-[11px]">
               <a className="text-brand-500 hover:underline" href="#">
                 Permintaan akses digital
               </a>
             </p>
 
-            <div className="rounded-md border border-brand-200 bg-brand-50 p-2.5 text-[11px] leading-snug text-brand-800">
+            <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
               <p className="flex items-center gap-1.5 font-semibold">
-                <Info size={13} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
+                <Info size={12} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
               </p>
               <p className="mt-1">
                 ID Pengguna: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_USER}</code>{' '}
@@ -213,7 +213,7 @@ export default function LoginPage() {
         </section>
 
         {/* Kolom identitas */}
-        <aside className="relative flex min-h-[360px] flex-col justify-between overflow-hidden bg-brand-900 p-5 text-white sm:p-6 md:min-h-0">
+        <aside className="relative flex min-h-[300px] flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,#071d3a_0%,#0d2f5d_52%,#203d77_100%)] p-5 text-white sm:p-6 md:min-h-0">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-25
@@ -224,7 +224,7 @@ export default function LoginPage() {
             <span className="inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-accent">
               Educational Tax Administration Simulation
             </span>
-            <h2 className="mt-3 text-[24px] font-bold leading-tight sm:text-[26px]">
+            <h2 className="mt-2 text-[22px] font-bold leading-tight sm:text-2xl">
               EduTax
               <br />
               Educational Tax
@@ -234,12 +234,12 @@ export default function LoginPage() {
               System
             </h2>
             <div className="mt-3 h-1 w-20 rounded bg-accent" />
-            <p className="mt-3 max-w-sm text-xs leading-relaxed text-white/80">
+            <p className="mt-2 max-w-sm text-[11px] leading-relaxed text-white/80">
               Simulasi pembelajaran administrasi perpajakan untuk lingkungan akademik.
             </p>
           </div>
 
-          <div className="relative mt-5 flex items-center gap-2">
+          <div className="relative mt-4 flex items-center gap-2">
             <Image
               src="/logo-uny.png"
               alt=""
