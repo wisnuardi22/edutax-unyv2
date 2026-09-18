@@ -176,14 +176,13 @@ function InformationDashboard({
   relatedParties: RelatedParty[];
 }) {
   const [openSection, setOpenSection] = useState('');
-  const initialized = useRef(false);
+  const previousTab = useRef(activeTab);
 
   useEffect(() => {
-    if (!initialized.current) {
-      initialized.current = true;
-      return;
+    if (previousTab.current !== activeTab) {
+      previousTab.current = activeTab;
+      setOpenSection(activeTab);
     }
-    setOpenSection(activeTab);
   }, [activeTab]);
 
   function toggleSection(key: string) {
