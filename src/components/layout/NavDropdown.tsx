@@ -21,13 +21,20 @@ export function NavDropdown({ label, items }: { label: string; items: NavSubItem
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 rounded px-2.5 py-1.5 text-[13px] hover:bg-white/10"
-      >
-        {label}
-        <ChevronDown size={13} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
-      </button>
+      <div className="flex items-center gap-0.5 rounded text-[13px] hover:bg-white/10">
+        <Link href="/portal" onClick={() => setOpen(false)} className="px-2.5 py-1.5">
+          {label}
+        </Link>
+        <button
+          type="button"
+          aria-label={`Buka menu ${label}`}
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="rounded px-1 py-1.5 hover:bg-white/10"
+        >
+          <ChevronDown size={13} className={open ? 'rotate-180 transition-transform' : 'transition-transform'} />
+        </button>
+      </div>
 
       {open && (
         <>

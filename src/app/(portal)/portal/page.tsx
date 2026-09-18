@@ -80,7 +80,7 @@ export default function PortalPage() {
                 active={tab === m.key}
                 expanded={expanded}
                 onToggle={() => {
-                  setTab(m.key);
+                  setTab(tab === m.key ? '' : m.key);
                   setExpandedSections((sections) => ({ ...sections, [m.key]: !sections[m.key] }));
                 }}
                 onAdd={m.key === 'pihak-terkait' ? () => {

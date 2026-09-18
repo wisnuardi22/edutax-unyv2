@@ -200,7 +200,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </nav>
       </header>
 
-      <main className="mx-auto w-full min-w-0 max-w-[1600px] overflow-x-hidden p-2 sm:p-4">{children}</main>
+      <main className="mx-auto w-full min-w-0 overflow-x-hidden p-2 sm:p-4">{children}</main>
     </div>
   );
 }
