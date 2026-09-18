@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
@@ -47,8 +47,8 @@ export default function PortalPage() {
   const breadcrumbName = activeEntity ? activeEntity.name : session.personName;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[minmax(240px,22%)_1fr]">
-      <aside className="rounded-card bg-white p-3 shadow-card">
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,22%)_minmax(0,1fr)]">
+      <aside className="min-w-0 rounded-card bg-white p-3 shadow-card">
         <p className="px-2 pb-0.5 text-[15px] font-semibold leading-tight text-ink">{breadcrumbId}</p>
         <p className="px-2 pb-2 text-[13px] leading-tight text-ink-muted">{breadcrumbName}</p>
 
@@ -95,7 +95,7 @@ export default function PortalPage() {
         </div>
       </aside>
 
-      <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
+      <section className="min-w-0 overflow-hidden rounded-card bg-white p-3 shadow-card sm:p-5">
         <InformationDashboard
           activeTab={tab}
           onSelect={setTab}
@@ -175,9 +175,14 @@ function InformationDashboard({
   session: { personNik: string; personName: string };
   relatedParties: RelatedParty[];
 }) {
-  const [openSection, setOpenSection] = useState(activeTab);
+  const [openSection, setOpenSection] = useState('');
+  const initialized = useRef(false);
 
   useEffect(() => {
+    if (!initialized.current) {
+      initialized.current = true;
+      return;
+    }
     setOpenSection(activeTab);
   }, [activeTab]);
 
