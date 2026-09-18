@@ -13,7 +13,7 @@ import {
   type Profile360,
 } from '@/lib/domain/portal';
 import { BelumTersedia } from '@/components/ui/BelumTersedia';
-import { RoleSection } from '@/app/(portal)/manajemen-akses/page';
+import { RoleSection, TkuSection } from '@/app/(portal)/manajemen-akses/page';
 import {
   taxpayerClassification,
   type RelatedParty,
@@ -195,7 +195,9 @@ function InformationDashboard({
     if (key === 'informasi-umum') return <InformasiUmumSection entity={entity} session={session} relatedParties={relatedParties} onEdit={() => toggleSection('pihak-terkait')} />;
     if (key === 'pihak-terkait') return <PihakTerkaitSection key={entity?.tin ?? 'main'} entityTin={entity?.tin ?? null} />;
     if (key === 'wakil-kuasa') return entity ? <RoleSection entityTin={entity.tin} /> : <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />;
-    if (key === 'tku') return <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />;
+    if (key === 'tku') return entity
+      ? <TkuSection entityTin={entity.tin} />
+      : <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />;
     return <BelumTersedia judul={INFORMASI_RINCIAN_MENU.find((item) => item.key === key)?.label ?? key} tahap="tahap pengembangan berikutnya" />;
   }
 

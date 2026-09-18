@@ -226,7 +226,7 @@ function PersonSection() {
 
 /* -------------------------------------------------------------------- tku */
 
-function TkuSection({ entityTin }: { entityTin: string }) {
+export function TkuSection({ entityTin }: { entityTin: string }) {
   const { db, mutate } = useDb();
   const tkus = db.tkus.filter((t) => t.entityTin === entityTin);
   const [subunit, setSubunit] = useState('');
