@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent } from '@/lib/storage/db';
 import { ROLE_GROUPS, ROLE_LABELS } from '@/lib/domain/roles';
@@ -21,7 +22,10 @@ type Tab = 'orang' | 'tku' | 'role';
 
 export default function ManajemenAksesPage() {
   const { db, mutate } = useDb();
-  const [tab, setTab] = useState<Tab>('orang');
+  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get('tab');
+  const initialTab: Tab = requestedTab === 'tku' || requestedTab === 'role' ? requestedTab : 'orang';
+  const [tab, setTab] = useState<Tab>(initialTab);
   const entityTin = db.session?.impersonatingTin ?? null;
 
   if (!entityTin) {

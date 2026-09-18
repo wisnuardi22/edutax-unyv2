@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent } from '@/lib/storage/db';
 import {
@@ -91,13 +92,29 @@ export default function PortalPage() {
             entityTin={activeEntity?.tin ?? null}
           />
         )}
-        {tab !== 'ikhtisar' && tab !== 'informasi-umum' && tab !== 'pihak-terkait' && (
+        {tab === 'wakil-kuasa' && <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />}
+        {tab === 'tku' && <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />}
+        {tab !== 'ikhtisar' && tab !== 'informasi-umum' && tab !== 'pihak-terkait' && tab !== 'wakil-kuasa' && tab !== 'tku' && (
           <BelumTersedia
             judul={INFORMASI_RINCIAN_MENU.find((m) => m.key === tab)!.label}
             tahap="tahap pengembangan berikutnya"
           />
         )}
       </section>
+    </div>
+  );
+}
+
+function WorkflowLink({ title, href }: { title: string; href: string }) {
+  return (
+    <div>
+      <h1 className="text-lg font-semibold">{title}</h1>
+      <p className="mt-3 text-[13px] text-ink-muted">
+        Modul ini mengikuti tahap berikutnya pada alur penambahan hak akses.
+      </p>
+      <Link className="btn-primary mt-4 inline-flex" href={href}>
+        Buka modul
+      </Link>
     </div>
   );
 }
@@ -173,6 +190,7 @@ function InformasiUmumSection({
   relatedParties: RelatedParty[];
 }) {
   const [subTab, setSubTab] = useState<'general' | 'flags'>('general');
+  const [editMode, setEditMode] = useState(false);
 
   const isBadan = !!entity;
   const profile = isBadan
@@ -205,9 +223,9 @@ function InformasiUmumSection({
         <h1 className="text-lg font-semibold">Informasi Umum Wajib Pajak</h1>
         <button
           className="btn-primary shrink-0"
-          onClick={() => alert('Fitur Edit disiapkan pada tahap pengembangan berikutnya.')}
+          onClick={() => setEditMode((value) => !value)}
         >
-          Edit
+          {editMode ? 'Tutup Edit' : 'Edit'}
         </button>
       </div>
 
@@ -285,6 +303,18 @@ function InformasiUmumSection({
             </p>
           )}
         </div>
+      )}
+
+      {editMode && (
+        <section id="pihak-terkait-editor" className="mt-8 border-t border-line pt-6">
+          <div className="mb-4">
+            <h2 className="text-base font-semibold text-ink">Edit Informasi Umum</h2>
+            <p className="mt-1 text-[13px] text-ink-muted">
+              Gulir ke bagian Pihak Terkait, lalu pilih Tambah untuk mendaftarkan pegawai sesuai alur panduan Coretax.
+            </p>
+          </div>
+          <PihakTerkaitSection entityTin={entity?.tin ?? null} />
+        </section>
       )}
 
     </div>
@@ -372,6 +402,7 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
   const [declared, setDeclared] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const currentPic = draft.find((p) => p.isPic);
 
@@ -402,6 +433,7 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
       const exists = list.some((p) => p.id === party.id);
       return exists ? list.map((p) => (p.id === party.id ? party : p)) : [...list, party];
     });
+    setSaved(true);
     return null;
   }
 
@@ -438,6 +470,15 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
         <p className="mt-3 rounded-md border border-good/40 bg-[#EAF7EE] px-3 py-2 text-[13px] text-good">
           Perubahan Pihak Terkait berhasil dikirim.
         </p>
+      )}
+
+      {saved && draft.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-md border border-good/40 bg-[#EAF7EE] px-3 py-2 text-[13px]">
+          <span className="text-good">Pihak terkait berhasil disimpan.</span>
+          <Link className="btn-primary" href="/manajemen-akses?tab=role">
+            Lanjut ke Wakil/Kuasa Saya
+          </Link>
+        </div>
       )}
 
       <p className="mt-3 text-[13px] text-ink-muted">
