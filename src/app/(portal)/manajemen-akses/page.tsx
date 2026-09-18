@@ -401,7 +401,7 @@ function TkuSection({ entityTin }: { entityTin: string }) {
 
 /* ------------------------------------------------------------------- role */
 
-function RoleSection({ entityTin }: { entityTin: string }) {
+export function RoleSection({ entityTin }: { entityTin: string }) {
   const { db, mutate } = useDb();
   const [nik, setNik] = useState('');
   const [scope, setScope] = useState<string>('PUSAT');

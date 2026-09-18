@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent } from '@/lib/storage/db';
 import {
@@ -12,6 +13,7 @@ import {
   type Profile360,
 } from '@/lib/domain/portal';
 import { BelumTersedia } from '@/components/ui/BelumTersedia';
+import { RoleSection } from '@/app/(portal)/manajemen-akses/page';
 import {
   taxpayerClassification,
   type RelatedParty,
@@ -31,6 +33,10 @@ export default function PortalPage() {
   const { db } = useDb();
   const session = db.session!;
   const [tab, setTab] = useState<string>(INFORMASI_RINCIAN_MENU[0].key);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+    ikhtisar: true,
+    'pihak-terkait': true,
+  });
 
   const activeEntity = db.entities.find((e) => e.tin === session.impersonatingTin);
   const profile: Profile360 = activeEntity
@@ -52,7 +58,7 @@ export default function PortalPage() {
             <button
               key={`shortcut-${key}`}
               onClick={() => setTab(key)}
-              className={`block w-full rounded px-2 py-2 text-left text-[13px] ${
+              className={`block w-full border-b border-line px-2 py-2 text-left text-[13px] ${
                 tab === key ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-canvas'
               }`}
             >
@@ -64,17 +70,29 @@ export default function PortalPage() {
         <p className="mt-2 px-2 pb-1 text-xxs font-semibold uppercase tracking-wide text-ink-muted">
           Informasi Detail
         </p>
-        {INFORMASI_RINCIAN_MENU.map((m) => (
-          <button
-            key={m.key}
-            onClick={() => setTab(m.key)}
-            className={`block w-full rounded px-2 py-2 text-left text-[13px] ${
-              tab === m.key ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-canvas'
-            }`}
-          >
-            {m.label}
-          </button>
-        ))}
+        <div className="overflow-hidden rounded-md border border-line">
+          {INFORMASI_RINCIAN_MENU.map((m) => {
+            const expanded = !!expandedSections[m.key];
+            return (
+              <SidebarAccordion
+                key={m.key}
+                label={m.label}
+                active={tab === m.key}
+                expanded={expanded}
+                onToggle={() => {
+                  setTab(m.key);
+                  setExpandedSections((sections) => ({ ...sections, [m.key]: !sections[m.key] }));
+                }}
+                onAdd={m.key === 'pihak-terkait' ? () => {
+                  setTab('pihak-terkait');
+                  window.setTimeout(() => {
+                    document.getElementById('pihak-terkait-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }, 0);
+                } : undefined}
+              />
+            );
+          })}
+        </div>
       </aside>
 
       <section className="min-w-0 rounded-card bg-white p-5 shadow-card">
@@ -92,7 +110,11 @@ export default function PortalPage() {
             entityTin={activeEntity?.tin ?? null}
           />
         )}
-        {tab === 'wakil-kuasa' && <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />}
+        {tab === 'wakil-kuasa' && activeEntity ? (
+          <RoleSection entityTin={activeEntity.tin} />
+        ) : tab === 'wakil-kuasa' ? (
+          <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />
+        ) : null}
         {tab === 'tku' && <WorkflowLink title="Tempat Kegiatan Usaha/Sub Unit" href="/manajemen-akses?tab=tku" />}
         {tab !== 'ikhtisar' && tab !== 'informasi-umum' && tab !== 'pihak-terkait' && tab !== 'wakil-kuasa' && tab !== 'tku' && (
           <BelumTersedia
@@ -119,9 +141,49 @@ function WorkflowLink({ title, href }: { title: string; href: string }) {
   );
 }
 
+function SidebarAccordion({
+  label,
+  active,
+  expanded,
+  onToggle,
+  onAdd,
+}: {
+  label: string;
+  active: boolean;
+  expanded: boolean;
+  onToggle: () => void;
+  onAdd?: () => void;
+}) {
+  return (
+    <div className="border-b border-line last:border-b-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={expanded}
+        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition ${
+          active ? 'bg-brand-50 font-semibold text-brand-700' : 'bg-white text-ink hover:bg-canvas'
+        }`}
+      >
+        {expanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+        <span className="min-w-0 flex-1">{label}</span>
+      </button>
+      {expanded && (
+        <div className="border-t border-line bg-[#FAFBFC] px-8 py-2">
+          <p className="text-xs leading-relaxed text-ink-muted">Buka bagian {label}.</p>
+          {onAdd && (
+            <button type="button" className="btn-primary mt-2 px-3 py-1.5 text-xs" onClick={onAdd}>
+              Tambah
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TaxpayerOverview({ profile }: { profile: Profile360 }) {
   return (
-    <div>
+    <div id="pihak-terkait-content">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-lg font-semibold">Taxpayer 360-Degree Overview</h1>
         <button className="btn-secondary shrink-0" onClick={() => window.print()}>
@@ -283,6 +345,7 @@ function InformasiUmumSection({
               </p>
             )}
           </div>
+
         </div>
       )}
 
