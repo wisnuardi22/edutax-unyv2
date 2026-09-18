@@ -128,13 +128,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <header className="bg-brand-800 text-white">
         <div className="flex flex-wrap items-center gap-3 px-4 py-2.5">
           {/* Branding EduTax, menggantikan logo DJP/Reformasi Perpajakan/SIAP. */}
-          <div className="flex shrink-0 items-center gap-2.5">
+          <Link href="/portal" className="flex shrink-0 items-center gap-2.5 rounded px-1 py-0.5 hover:bg-white/10" aria-label="Kembali ke Portal Saya">
             <Image src="/logo-uny.png" alt="" width={30} height={30} className="rounded-full bg-white p-0.5" />
             <span className="font-semibold">
               Edu<span className="text-brand-200">Tax</span>
             </span>
             <span className="rounded bg-white/10 px-2 py-0.5 text-xxs">Simulasi Akademik</span>
-          </div>
+          </Link>
 
           {/*
             Utility bar: susunan dan urutan elemen persis referensi Coretax

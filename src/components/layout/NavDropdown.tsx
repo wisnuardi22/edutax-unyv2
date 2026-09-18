@@ -22,7 +22,12 @@ export function NavDropdown({ label, items }: { label: string; items: NavSubItem
   return (
     <div className="relative">
       <div className="flex items-center gap-0.5 rounded text-[13px] hover:bg-white/10">
-        <Link href="/portal" onClick={() => setOpen(false)} className="px-2.5 py-1.5">
+        <Link
+          href="/portal"
+          onClick={() => setOpen(false)}
+          aria-label="Kembali ke Portal Saya"
+          className="rounded px-2.5 py-1.5"
+        >
           {label}
         </Link>
         <button
