@@ -178,11 +178,6 @@ function InformasiUmumSection({
     ? profileForEntity(entity!.tin, entity!.name, entity!.address)
     : profileForMainAccount(session.personNik, session.personName);
 
-  // Bukan field asli pada slide Informasi Umum — PDF hanya menjelaskan PIC
-  // lewat submenu Pihak Terkait terpisah. Baris ini ditambahkan sebagai
-  // pintasan lihat-cepat khusus EduTax, ditandai jelas sebagai tambahan,
-  // supaya begitu PIC ditentukan di Pihak Terkait, hasilnya langsung
-  // terlihat di sini tanpa harus membuka tab lain.
   const activePic = isBadan
     ? relatedParties.find((p) => p.entityTin === entity!.tin && p.isPic)
     : null;
@@ -232,9 +227,9 @@ function InformasiUmumSection({
       {subTab === 'general' && (
         <div className="mt-4 grid gap-x-10 gap-y-3 lg:grid-cols-2">
           <div className="space-y-3">
-            <KV label="Nomor Pokok Wajib Pajak" value={profile.tin} mono />
+            <KV label="Nomor Pokok Wajib Pajak" value={activePic?.personNik ?? (isBadan ? '—' : profile.tin)} mono />
             {isBadan && <KV label="Kode Unit Kerja" value="440941" />}
-            <KV label="Nama Wajib Pajak" value={profile.name} />
+            <KV label="Nama Wajib Pajak" value={activePic?.personName ?? (isBadan ? '—' : profile.name)} />
             <KV label="Jenis Wajib Pajak" value={profile.taxpayerType} />
             <KV label="Kategori Wajib Pajak" value={profile.taxpayerCategory} />
             <KV label="Tanggal Pendaftaran" value={profile.dateRegistered} />
@@ -245,21 +240,6 @@ function InformasiUmumSection({
                 Aktif
               </span>
             </div>
-            {isBadan && (
-              <div>
-                <p className="text-[13px] font-semibold text-ink">PIC (Penanggung Jawab) Aktif</p>
-                {activePic ? (
-                  <p className="mt-0.5 text-[13px] text-ink-muted">
-                    {activePic.personName}{' '}
-                    <span className="font-mono">({activePic.personNik})</span>
-                  </p>
-                ) : (
-                  <p className="mt-0.5 text-[13px] text-warn">
-                    Belum ditentukan — atur di menu Pihak Terkait
-                  </p>
-                )}
-              </div>
-            )}
           </div>
 
           <div className="space-y-3">
@@ -306,9 +286,6 @@ function InformasiUmumSection({
         </div>
       )}
 
-      <p className="mt-6 text-xxs text-ink-muted">
-        PIC (Penanggung Jawab) Aktif
-      </p>
     </div>
   );
 }
