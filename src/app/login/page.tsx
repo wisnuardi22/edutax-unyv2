@@ -62,8 +62,8 @@ export default function LoginPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-canvas px-4 py-10">
-      <header className="mb-8 flex items-center justify-center gap-4">
+    <main className="flex min-h-screen flex-col items-center bg-canvas px-4 py-7 sm:py-8">
+      <header className="mb-5 flex items-center justify-center gap-3 sm:mb-6 sm:gap-4">
         <Image
           src="/logo-uny.png"
           alt=""
@@ -82,10 +82,10 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <div className="mx-auto grid w-full max-w-5xl overflow-hidden rounded-card bg-white shadow-card md:grid-cols-2">
+      <div className="grid w-full max-w-[930px] overflow-hidden rounded-card bg-white shadow-card md:grid-cols-2">
         {/* Kolom formulir */}
-        <section className="p-8 md:p-10">
-          <h1 className="text-2xl font-semibold text-ink">Login</h1>
+        <section className="p-6 sm:p-7 md:p-8">
+          <h1 className="text-[26px] font-semibold leading-tight text-ink">Login</h1>
           <p className="mt-1 text-xs font-semibold tracking-wide text-brand-600">
             Tahap 1 — Modul Role Akses
           </p>
@@ -213,7 +213,7 @@ export default function LoginPage() {
         </section>
 
         {/* Kolom identitas */}
-        <aside className="relative flex flex-col justify-between overflow-hidden bg-brand-900 p-8 text-white md:p-10">
+        <aside className="relative flex min-h-[560px] flex-col justify-between overflow-hidden bg-brand-900 p-7 text-white sm:p-8">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-25
@@ -224,7 +224,7 @@ export default function LoginPage() {
             <span className="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-accent">
               Educational Tax Administration Simulation
             </span>
-            <h2 className="mt-6 text-4xl font-bold leading-tight">
+            <h2 className="mt-5 text-3xl font-bold leading-tight sm:text-4xl">
               EduTax
               <br />
               Educational Tax
