@@ -82,22 +82,22 @@ export default function LoginPage() {
         </div>
       </header>
 
-      <div className="grid w-full max-w-[930px] overflow-hidden rounded-card bg-white shadow-card md:grid-cols-2">
+      <div className="grid w-full max-w-[600px] overflow-hidden rounded-card bg-white shadow-card md:h-[500px] md:grid-cols-2">
         {/* Kolom formulir */}
-        <section className="p-5 sm:p-6 md:p-7">
-          <h1 className="text-2xl font-semibold leading-tight text-ink">Login</h1>
+        <section className="overflow-y-auto p-4 sm:p-5 md:p-5">
+          <h1 className="text-[22px] font-semibold leading-tight text-ink">Login</h1>
           <p className="mt-1 text-xs font-semibold tracking-wide text-brand-600">
             Tahap 1 — Modul Role Akses
           </p>
 
-          <div className="mt-4 space-y-3">
+          <div className="mt-3 space-y-2.5">
             <div>
               <label className="field-label" htmlFor="userId">
                 ID Pengguna <span className="text-bad">*</span>
               </label>
               <input
                 id="userId"
-                className="field-input"
+                className="field-input !py-2"
                 placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
@@ -113,7 +113,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   type={showPass ? 'text' : 'password'}
-                  className="field-input pr-10"
+                  className="field-input !py-2 pr-10"
                   placeholder="Masukan Kata Sandi ID Pengguna Anda"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -135,7 +135,7 @@ export default function LoginPage() {
               <label className="field-label" htmlFor="lang">
                 Pemilihan Bahasa
               </label>
-              <select id="lang" className="field-input" defaultValue="id">
+              <select id="lang" className="field-input !py-2" defaultValue="id">
                 <option value="id">id-ID — Bahasa Indonesia</option>
                 <option value="en">en-US — English</option>
               </select>
@@ -159,7 +159,7 @@ export default function LoginPage() {
                 </button>
                 <input
                   id="captcha"
-                  className="field-input flex-1"
+                  className="field-input !py-2 flex-1"
                   placeholder="Masukkan Captcha"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
@@ -178,7 +178,7 @@ export default function LoginPage() {
               </p>
             )}
 
-            <button type="button" className="btn-primary w-full" onClick={handleLogin}>
+            <button type="button" className="btn-primary !py-2 w-full" onClick={handleLogin}>
               Login
             </button>
 
@@ -213,7 +213,7 @@ export default function LoginPage() {
         </section>
 
         {/* Kolom identitas */}
-        <aside className="relative flex flex-col justify-between overflow-hidden bg-brand-900 p-6 text-white sm:p-7">
+        <aside className="relative flex min-h-[360px] flex-col justify-between overflow-hidden bg-brand-900 p-5 text-white sm:p-6 md:min-h-0">
           <div
             aria-hidden
             className="pointer-events-none absolute inset-0 opacity-25
@@ -224,7 +224,7 @@ export default function LoginPage() {
             <span className="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-accent">
               Educational Tax Administration Simulation
             </span>
-            <h2 className="mt-4 text-3xl font-bold leading-tight sm:text-[34px]">
+            <h2 className="mt-3 text-[28px] font-bold leading-tight sm:text-3xl">
               EduTax
               <br />
               Educational Tax
