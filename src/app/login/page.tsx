@@ -92,12 +92,12 @@ export default function LoginPage() {
 
           <div className="mt-3 space-y-2.5">
             <div>
-              <label className="field-label" htmlFor="userId">
+              <label className="field-label !mb-1 text-xs" htmlFor="userId">
                 ID Pengguna <span className="text-bad">*</span>
               </label>
               <input
                 id="userId"
-                className="field-input !py-2"
+                className="field-input !py-1.5 text-xs"
                 placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
@@ -106,14 +106,14 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="field-label" htmlFor="password">
+              <label className="field-label !mb-1 text-xs" htmlFor="password">
                 Kata Sandi <span className="text-bad">*</span>
               </label>
               <div className="relative">
                 <input
                   id="password"
                   type={showPass ? 'text' : 'password'}
-                  className="field-input !py-2 pr-10"
+                  className="field-input !py-1.5 pr-10 text-xs"
                   placeholder="Masukan Kata Sandi ID Pengguna Anda"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -132,34 +132,34 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="field-label" htmlFor="lang">
+              <label className="field-label !mb-1 text-xs" htmlFor="lang">
                 Pemilihan Bahasa
               </label>
-              <select id="lang" className="field-input !py-2" defaultValue="id">
+              <select id="lang" className="field-input !py-1.5 text-xs" defaultValue="id">
                 <option value="id">id-ID — Bahasa Indonesia</option>
                 <option value="en">en-US — English</option>
               </select>
             </div>
 
             <div>
-              <label className="field-label" htmlFor="captcha">
+              <label className="field-label !mb-1 text-xs" htmlFor="captcha">
                 Kode Keamanan <span className="text-bad">*</span>
               </label>
               <div className="flex items-center gap-2">
-                <output className="select-none rounded-md border border-line bg-[repeating-linear-gradient(135deg,#EDF1F6_0_6px,#FFFFFF_6px_12px)] px-4 py-2.5 font-semibold tracking-[0.3em] text-ink">
+                <output className="select-none rounded-md border border-line bg-[repeating-linear-gradient(135deg,#EDF1F6_0_6px,#FFFFFF_6px_12px)] px-2.5 py-1.5 text-xs font-semibold tracking-[0.25em] text-ink">
                   {captcha}
                 </output>
                 <button
                   type="button"
                   onClick={refreshCaptcha}
-                  className="rounded-md border border-line p-2.5 text-ink-muted hover:text-brand-600"
+                  className="rounded-md border border-line p-1.5 text-ink-muted hover:text-brand-600"
                   aria-label="Ganti kode keamanan"
                 >
                   <RefreshCw size={16} />
                 </button>
                 <input
                   id="captcha"
-                  className="field-input !py-2 flex-1"
+                  className="field-input !py-1.5 flex-1 text-xs"
                   placeholder="Masukkan Captcha"
                   value={captchaInput}
                   onChange={(e) => setCaptchaInput(e.target.value)}
@@ -168,12 +168,12 @@ export default function LoginPage() {
               </div>
             </div>
 
-            <a className="inline-block text-sm text-brand-500 hover:underline" href="#">
+            <a className="inline-block text-xs text-brand-500 hover:underline" href="#">
               Lupa Kata Sandi?
             </a>
 
             {error && (
-              <p role="alert" className="rounded-md bg-bad/10 px-3 py-2 text-sm text-bad">
+              <p role="alert" className="rounded-md bg-bad/10 px-2 py-1.5 text-xs text-bad">
                 {error}
               </p>
             )}
@@ -182,21 +182,21 @@ export default function LoginPage() {
               Login
             </button>
 
-            <p className="text-center text-sm text-ink-muted">
+            <p className="text-center text-xs text-ink-muted">
               Pengguna Baru?{' '}
               <a className="text-brand-500 hover:underline" href="#">
                 Daftar disini
               </a>
             </p>
-            <p className="text-center text-sm">
+            <p className="text-center text-xs">
               <a className="text-brand-500 hover:underline" href="#">
                 Permintaan akses digital
               </a>
             </p>
 
-            <div className="rounded-md border border-brand-200 bg-brand-50 p-3 text-[13px] text-brand-800">
+            <div className="rounded-md border border-brand-200 bg-brand-50 p-2.5 text-[11px] leading-snug text-brand-800">
               <p className="flex items-center gap-1.5 font-semibold">
-                <Info size={14} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
+                <Info size={13} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
               </p>
               <p className="mt-1">
                 ID Pengguna: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_USER}</code>{' '}
@@ -221,10 +221,10 @@ export default function LoginPage() {
                        [background-size:56px_56px]"
           />
           <div className="relative">
-            <span className="inline-block rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-accent">
+            <span className="inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-accent">
               Educational Tax Administration Simulation
             </span>
-            <h2 className="mt-3 text-[28px] font-bold leading-tight sm:text-3xl">
+            <h2 className="mt-3 text-[24px] font-bold leading-tight sm:text-[26px]">
               EduTax
               <br />
               Educational Tax
@@ -233,21 +233,21 @@ export default function LoginPage() {
               <br />
               System
             </h2>
-            <div className="mt-5 h-1 w-28 rounded bg-accent" />
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/80">
+            <div className="mt-3 h-1 w-20 rounded bg-accent" />
+            <p className="mt-3 max-w-sm text-xs leading-relaxed text-white/80">
               Simulasi pembelajaran administrasi perpajakan untuk lingkungan akademik.
             </p>
           </div>
 
-          <div className="relative mt-8 flex items-center gap-3">
+          <div className="relative mt-5 flex items-center gap-2">
             <Image
               src="/logo-uny.png"
               alt=""
-              width={44}
-              height={44}
+              width={34}
+              height={34}
               className="rounded-full bg-white p-0.5"
             />
-            <p className="text-[11px] font-semibold leading-tight tracking-[0.16em] text-white/90">
+            <p className="text-[9px] font-semibold leading-tight tracking-[0.12em] text-white/90">
               UNIVERSITAS NEGERI
               <br />
               YOGYAKARTA
