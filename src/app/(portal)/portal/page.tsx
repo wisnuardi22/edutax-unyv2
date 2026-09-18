@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { CalendarDays, ChevronDown, ChevronRight, Download, FileDown, FileSpreadsheet, FileText, RefreshCw } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent } from '@/lib/storage/db';
 import {
@@ -245,34 +245,63 @@ function PageAccordion({
 }
 
 function TaxpayerOverview({ profile }: { profile: Profile360 }) {
+  const [view, setView] = useState('profil');
+  const views = [
+    ['profil', 'Profil'],
+    ['billing', 'Daftar Kode Billing Belum Dibayar'],
+    ['saldo', 'Saldo Saat Ini'],
+    ['spt', 'SPT Belum Disampaikan'],
+    ['jenis-pajak', 'Jenis Pajak Terdaftar'],
+    ['kasus', 'Kasus Aktif'],
+    ['fasilitas', 'Fasilitas Aktif'],
+  ] as const;
+
   return (
     <div id="pihak-terkait-content">
       <div className="flex items-start justify-between gap-4">
-        <h1 className="text-lg font-semibold">Taxpayer 360-Degree Overview</h1>
-        <button className="btn-secondary shrink-0" onClick={() => window.print()}>
-          Print 360 Degree View
+        <h1 className="text-xl font-semibold">Tinjauan 360 - Derajat Wajib Pajak</h1>
+        <button className="btn-primary shrink-0" onClick={() => window.print()}>
+          <Download size={15} /> Unduh Ikhtisar Profil
         </button>
       </div>
 
-      <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        <Row label="Name" value={profile.name} />
-        <Row label="Taxpayer Identification Number" value={profile.tin} mono />
-        <Row label="Main Activity" value={profile.mainActivity} />
-        <Row label="Taxpayer Type" value={profile.taxpayerType} />
-        <Row label="Taxpayer Category" value={profile.taxpayerCategory} />
-        <Row label="TIN Status" value={profile.tinStatus} />
-        <Row label="Date Registered" value={profile.dateRegistered} />
-        <Row label="Activation Date" value={profile.activationDate} />
-        <Row label="Taxable Person for VAT Purposes Status" value={profile.vatStatus} />
-        <Row label="Taxable Person for VAT Purposes Appointment Date" value={profile.vatAppointmentDate} />
-        <Row label="Regional Tax Office" value={profile.regionalTaxOffice} />
-        <Row label="Local Tax Office" value={profile.localTaxOffice} />
-        <Row label="Supervisory Section" value={profile.supervisorySection} />
-        <Row label="Date of Last Profile Update" value={profile.lastProfileUpdate} />
-      </dl>
+      <nav className="mt-4 flex gap-5 overflow-x-auto border-b border-line text-sm whitespace-nowrap">
+        {views.map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setView(key)}
+            className={`-mb-px border-b-2 px-1 pb-2 ${view === key ? 'border-brand-600 font-semibold text-brand-800' : 'border-transparent text-ink-muted hover:text-ink'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </nav>
+
+      {view === 'profil' ? (
+        <dl className="mt-5 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          <Row label="Nama" value={profile.name} />
+          <Row label="Nomor Pokok Wajib Pajak" value={profile.tin} mono />
+          <Row label="Kegiatan Utama" value={profile.mainActivity} />
+          <Row label="Jenis Wajib Pajak" value={profile.taxpayerType} />
+          <Row label="Kategori Wajib Pajak" value={profile.taxpayerCategory} />
+          <Row label="Status NPWP" value={profile.tinStatus} />
+          <Row label="Tanggal Terdaftar" value={profile.dateRegistered} />
+          <Row label="Tanggal Aktivasi" value={profile.activationDate} />
+          <Row label="Status Pengusaha Kena Pajak" value={profile.vatStatus} />
+          <Row label="Tanggal Pengukuhan Pengusaha Kena Pajak" value={profile.vatAppointmentDate} />
+          <Row label="Kantor Wilayah Direktorat Jenderal Pajak" value={profile.regionalTaxOffice} />
+          <Row label="Kantor Pelayanan Pajak" value={profile.localTaxOffice} />
+          <Row label="Seksi Pengawasan" value={profile.supervisorySection} />
+          <Row label="Tanggal Pembaruan Profil Terakhir" value={profile.lastProfileUpdate} />
+        </dl>
+      ) : (
+        <div className="mt-5 rounded-md border border-line bg-canvas p-5 text-sm text-ink-muted">
+          Belum ada data pada menu {views.find(([key]) => key === view)?.[1]}.
+        </div>
+      )}
 
       <p className="mt-6 text-xxs text-ink-muted">
-        Sebagian nilai di atas (Taxpayer Type, TIN Status, tanggal-tanggal, kantor pajak, dst.)
+        Sebagian nilai di atas (jenis, status, tanggal-tanggal, kantor pajak, dst.)
         tidak terbaca jelas pada screenshot panduan karena tertutup kotak anotasi, sehingga diisi
         dengan nilai yang wajar untuk keperluan simulasi — bukan disalin dari sumber resmi.
       </p>
@@ -390,12 +419,6 @@ function InformasiUmumSection({
           <div className="space-y-3">
             {isBadan ? (
               <>
-                {flags.map((f) => (
-                  <div key={f.label} className="flex items-center justify-between gap-3 text-[13px]">
-                    <span className="text-ink">{f.label}</span>
-                    <span className={f.value ? 'text-good' : 'text-bad'}>{f.value ? '✓' : '✕'}</span>
-                  </div>
-                ))}
                 <KV label="Bahasa yang Dipilih" value="Indonesia" />
                 <KV label="Kantor Wilayah" value={profile.regionalTaxOffice} />
                 <KV label="Kantor Pelayanan Pajak" value={profile.localTaxOffice} />
@@ -414,16 +437,45 @@ function InformasiUmumSection({
       )}
 
       {subTab === 'flags' && (
-        <div className="mt-4">
+        <div className="mt-4 overflow-x-auto">
           {isBadan ? (
-            <div className="max-w-md space-y-3">
-              {flags.map((f) => (
-                <div key={f.label} className="flex items-center justify-between gap-3 rounded-md border border-line px-3 py-2 text-[13px]">
-                  <span className="text-ink">{f.label}</span>
-                  <span className={f.value ? 'text-good' : 'text-bad'}>{f.value ? '✓ Ya' : '✕ Tidak'}</span>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="mb-3 flex flex-wrap gap-2">
+                <button className="rounded-md bg-brand-50 p-2 text-brand-800" title="Muat ulang"><RefreshCw size={16} /></button>
+                <button className="rounded-md bg-zinc-600 p-2 text-white" title="Ekspor data"><FileText size={16} /></button>
+                <button className="rounded-md bg-good p-2 text-white" title="Ekspor Excel"><FileSpreadsheet size={16} /></button>
+                <button className="rounded-md bg-bad p-2 text-white" title="Ekspor PDF"><FileDown size={16} /></button>
+              </div>
+              <table className="data-table min-w-[850px]">
+                <thead>
+                  <tr>
+                    <th>Jenis Bendera</th>
+                    <th>Jenis Surat Pemberitahuan Pajak</th>
+                    <th>Periode Pajak</th>
+                    <th>Tanggal Penunjukan</th>
+                    <th>Nomor Penunjukan</th>
+                  </tr>
+                  <tr className="bg-white">
+                    <td><select className="field-input py-1.5 text-xs"><option>Pilih Jenis Bendera</option></select></td>
+                    <td><select className="field-input py-1.5 text-xs"><option>Pilih Jenis Surat Pemberitahuan Pajak</option></select></td>
+                    <td><select className="field-input py-1.5 text-xs"><option>Pilih Periode Pajak</option></select></td>
+                    <td><div className="flex items-center gap-1"><input className="field-input py-1.5 text-xs" placeholder="dd-mm-yyyy" /><CalendarDays size={18} className="text-brand-800" /></div></td>
+                    <td><input className="field-input py-1.5 text-xs" /></td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {flags.map((flag) => (
+                    <tr key={flag.label}>
+                      <td>{flag.label}</td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                      <td></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           ) : (
             <p className="rounded-md border border-line bg-canvas p-3 text-[13px] text-ink-muted">
               Tidak ada Taxpayer Flags untuk akun Orang Pribadi.
