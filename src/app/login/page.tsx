@@ -182,18 +182,7 @@ export default function LoginPage() {
               Login
             </button>
 
-            <p className="text-center text-[11px] text-ink-muted">
-              Pengguna Baru?{' '}
-              <a className="text-brand-500 hover:underline" href="#">
-                Daftar disini
-              </a>
-            </p>
-            <p className="text-center text-[11px]">
-              <a className="text-brand-500 hover:underline" href="#">
-                Permintaan akses digital
-              </a>
-            </p>
-
+            
             <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
               <p className="flex items-center gap-1.5 font-semibold">
                 <Info size={12} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
