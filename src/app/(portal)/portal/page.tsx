@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useDb } from '@/lib/storage/useDb';
+import { addAuditEvent } from '@/lib/storage/db';
 import {
   INFORMASI_RINCIAN_MENU,
   PROFIL_SHORTCUT_KEYS,
@@ -379,6 +380,24 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
     if (party.isPic && otherPic) {
       return `Badan ini sudah memiliki PIC aktif atas nama ${otherPic.personName}. Lepas status PIC tersebut terlebih dahulu (Edit → hilangkan centang "Apakah PIC?" → Save) sebelum menetapkan PIC baru.`;
     }
+    mutate((d) => {
+      const exists = d.relatedParties.some((p) => p.id === party.id);
+      d.relatedParties = exists
+        ? d.relatedParties.map((p) => (p.id === party.id ? party : p))
+        : [...d.relatedParties, party];
+      if (!d.persons.some((p) => p.nik === party.personNik)) {
+        d.persons.push({
+          nik: party.personNik,
+          nama: party.personName,
+          alamat: '',
+          negara: party.nationality,
+          email: party.email,
+          phone: party.phone,
+          padan: true,
+        });
+      }
+      addAuditEvent(d, 'Menambahkan Related Party', `${party.personNik} ${party.personName}`);
+    });
     setDraft((list) => {
       const exists = list.some((p) => p.id === party.id);
       return exists ? list.map((p) => (p.id === party.id ? party : p)) : [...list, party];
@@ -388,6 +407,9 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
 
   function remove(id: string) {
     if (!confirm('Hapus pihak terkait ini dari daftar?')) return;
+    mutate((d) => {
+      d.relatedParties = d.relatedParties.filter((p) => p.id !== id);
+    });
     setDraft((list) => list.filter((p) => p.id !== id));
   }
 
@@ -550,7 +572,7 @@ function RelatedPartyDialog({
   mode: 'add' | 'edit' | 'view';
   party: RelatedParty | null;
   entityTin: string;
-  persons: { nik: string; nama: string; negara: string }[];
+  persons: { nik: string; nama: string; negara: string; email?: string; phone?: string }[];
   onCancel: () => void;
   onSave: (party: RelatedParty) => string | null;
 }) {
@@ -567,7 +589,7 @@ function RelatedPartyDialog({
   const [phone, setPhone] = useState(party?.phone ?? '');
   const [share, setShare] = useState(party?.sharePercentage ?? '');
   const [ubo, setUbo] = useState(party?.beneficialOwnerCriteria ?? '');
-  const [validFrom, setValidFrom] = useState(party?.validFrom ?? todayDMY());
+  const [validFrom, setValidFrom] = useState(party?.validFrom ?? '');
   const [validTo, setValidTo] = useState(party?.validTo ?? '');
   const [error, setError] = useState<string | null>(null);
 
@@ -582,6 +604,9 @@ function RelatedPartyDialog({
     if (match) {
       setName(match.nama);
       setNationality(match.negara || 'Indonesia');
+      setEmail(match.email || '');
+      setPhone(match.phone || '');
+      setCountry(match.negara || 'Indonesia');
     }
   }
 
@@ -648,7 +673,7 @@ function RelatedPartyDialog({
           <div>
             <label className="field-label" htmlFor="role">Jenis Orang Terkait</label>
             <select id="role" className="field-input" disabled={readOnly} value={role} onChange={(e) => setRole(e.target.value as RelatedPersonRole)}>
-              {(Object.keys(ROLE_LABELS) as RelatedPersonRole[]).map((r) => (
+              {(['DIREKTUR', 'KOMISARIS', 'PEMEGANG_SAHAM', 'WAKIL', 'LAINNYA'] as const).map((r) => (
                 <option key={r} value={r}>{ROLE_LABELS[r]}</option>
               ))}
             </select>

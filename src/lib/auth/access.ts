@@ -78,8 +78,8 @@ export function canDraft(
   parties: RelatedParty[] = [],
 ): boolean {
   if (isEntityPic(parties, session)) return true;
-  const { drafter, signer } = rolesForBupot(kind);
-  return hasRole(all, session, drafter) || hasRole(all, session, signer);
+  const { drafter } = rolesForBupot(kind);
+  return hasRole(all, session, drafter);
 }
 
 export function canSign(

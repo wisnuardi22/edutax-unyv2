@@ -52,6 +52,8 @@ export interface Person {
   nama: string;
   alamat: string;
   negara: string;
+  email?: string;
+  phone?: string;
   npwp16?: string;
   /** false bila NIK tidak padan -> memicu sentinel 9990000000999000 */
   padan: boolean;
@@ -246,6 +248,14 @@ export interface RelatedParty {
   isExternalData: boolean;
   validFrom: string;  // dd-mm-yyyy
   validTo: string | null;
+}
+
+export interface AuditEvent {
+  id: string;
+  at: string;
+  actorNik: string;
+  action: string;
+  context: string;
 }
 
 /**

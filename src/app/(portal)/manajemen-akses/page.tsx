@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useDb } from '@/lib/storage/useDb';
+import { addAuditEvent } from '@/lib/storage/db';
 import { ROLE_GROUPS, ROLE_LABELS } from '@/lib/domain/roles';
 import type { RoleCode } from '@/lib/domain/roles';
 
@@ -39,6 +40,7 @@ export default function ManajemenAksesPage() {
 
   return (
     <div className="space-y-4">
+      <TutorialPanel entityTin={entityTin} />
       <nav className="flex flex-wrap gap-1 rounded-card bg-white p-2 shadow-card">
         {TABS.map((t) => (
           <button
@@ -52,11 +54,73 @@ export default function ManajemenAksesPage() {
           </button>
         ))}
       </nav>
+      <AuditPanel />
 
       {tab === 'orang' && <PersonSection />}
       {tab === 'tku' && <TkuSection entityTin={entityTin} />}
       {tab === 'role' && <RoleSection entityTin={entityTin} />}
     </div>
+  );
+}
+
+function AuditPanel() {
+  const { db } = useDb();
+  const events = [...db.auditTrail].reverse().slice(0, 8);
+
+  return (
+    <section className="rounded-card bg-white p-4 shadow-card">
+      <details>
+        <summary className="cursor-pointer text-sm font-semibold text-ink">Riwayat aktivitas praktikum</summary>
+        {events.length === 0 ? (
+          <p className="mt-3 text-[13px] text-ink-muted">Belum ada aktivitas tercatat.</p>
+        ) : (
+          <ol className="mt-3 space-y-1.5 text-[13px]">
+            {events.map((event) => (
+              <li key={event.id} className="flex flex-wrap gap-x-2 gap-y-0.5 border-b border-line pb-1.5 last:border-0">
+                <time className="font-mono text-xxs text-ink-muted">{new Date(event.at).toLocaleString('id-ID')}</time>
+                <span className="font-medium text-ink">{event.action}</span>
+                <span className="text-ink-muted">{event.context}</span>
+              </li>
+            ))}
+          </ol>
+        )}
+      </details>
+    </section>
+  );
+}
+
+function TutorialPanel({ entityTin }: { entityTin: string }) {
+  const { db } = useDb();
+  const related = db.relatedParties.some((p) => p.entityTin === entityTin);
+  const assigned = db.roleAssignments.some((a) => a.entityTin === entityTin);
+  const hasTku = db.tkus.some((t) => t.entityTin === entityTin && !t.nitku.endsWith('000000'));
+  const steps = [
+    { label: 'Login', done: !!db.session },
+    { label: 'Impersonating akun Badan', done: db.session?.impersonatingTin === entityTin },
+    { label: 'Tambah Related Person / Related Taxpayer', done: related },
+    { label: 'Wakil/Kuasa Saya → Tetapkan Role', done: assigned },
+    { label: 'Opsional: tambah TKU dan PIC TKU', done: hasTku },
+  ];
+  const current = steps.findIndex((step) => !step.done);
+  const progress = steps.filter((step) => step.done).length;
+
+  return (
+    <section className="rounded-card border border-brand-200 bg-brand-50 p-4 shadow-card">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold text-brand-900">Tutorial Penambahan Hak Akses</p>
+          <p className="mt-0.5 text-[13px] text-brand-800">Langkah {Math.min(current < 0 ? steps.length : current + 1, steps.length)} dari {steps.length}</p>
+        </div>
+        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-brand-700">{progress}/{steps.length} selesai</span>
+      </div>
+      <ol className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+        {steps.map((step, index) => (
+          <li key={step.label} className={`rounded-md border px-2.5 py-2 text-xs ${step.done ? 'border-good/40 bg-good/10 text-good' : index === current ? 'border-accent bg-white font-semibold text-brand-800' : 'border-brand-100 bg-white/60 text-ink-muted'}`}>
+            <span className="font-mono">{index + 1}.</span> {step.label}
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -165,7 +229,10 @@ function TkuSection({ entityTin }: { entityTin: string }) {
   const [jenis, setJenis] = useState('Kantor Cabang');
   const [nama, setNama] = useState('');
   const [deskripsi, setDeskripsi] = useState('');
+  const [kluKode, setKluKode] = useState('');
+  const [kluDeskripsi, setKluDeskripsi] = useState('');
   const [alamat, setAlamat] = useState('');
+  const [picNik, setPicNik] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   function addTku() {
@@ -179,14 +246,38 @@ function TkuSection({ entityTin }: { entityTin: string }) {
       setError('NITKU tersebut sudah terdaftar.');
       return;
     }
+    if (!nama.trim() || !deskripsi.trim() || !kluKode.trim() || !kluDeskripsi.trim()) {
+      setError('Jenis TKU, Nama TKU, Deskripsi TKU, KLU TKU, dan Deskripsi KLU TKU wajib diisi.');
+      return;
+    }
     setError(null);
     mutate((d) => {
       d.tkus.push({
         nitku, entityTin, jenis, nama: nama.trim(), deskripsi: deskripsi.trim(),
-        kluKode: '', kluDeskripsi: '', alamat: alamat.trim(), picNiks: [],
+        kluKode: kluKode.trim(), kluDeskripsi: kluDeskripsi.trim(), alamat: alamat.trim(), picNiks: [],
       });
+      addAuditEvent(d, 'Menambahkan TKU', `${nitku} ${nama.trim()}`);
     });
-    setSubunit(''); setNama(''); setDeskripsi(''); setAlamat('');
+    setSubunit(''); setNama(''); setDeskripsi(''); setKluKode(''); setKluDeskripsi(''); setAlamat('');
+  }
+
+  function addPic(nitku: string) {
+    const cleanNik = picNik.replace(/\D/g, '');
+    if (cleanNik.length !== 16) {
+      setError('NIK PIC TKU harus 16 digit angka.');
+      return;
+    }
+    if (!db.persons.some((p) => p.nik === cleanNik)) {
+      setError('NIK belum tersedia sebagai akun latihan atau Pihak Terkait.');
+      return;
+    }
+    mutate((d) => {
+      const tku = d.tkus.find((t) => t.nitku === nitku);
+      if (tku && !tku.picNiks.includes(cleanNik)) tku.picNiks.push(cleanNik);
+      addAuditEvent(d, 'Menambahkan PIC TKU', `${cleanNik} pada ${nitku}`);
+    });
+    setPicNik('');
+    setError(null);
   }
 
   function togglePic(nitku: string, nik: string) {
@@ -221,10 +312,22 @@ function TkuSection({ entityTin }: { entityTin: string }) {
                 <span className="rounded bg-brand-50 px-2 py-0.5 text-xxs text-brand-700">{t.jenis}</span>
               </div>
               <p className="mt-1 text-[13px] text-ink-muted">{t.alamat}</p>
+              <p className="mt-1 text-[13px] text-ink-muted">KLU: {t.kluKode || '—'} {t.kluDeskripsi && `— ${t.kluDeskripsi}`}</p>
 
               <p className="mt-3 text-[13px] font-medium">
                 PIC TKU {t.nitku.endsWith('000000') && <span className="text-ink-muted">(pusat, maksimal 1 orang)</span>}
               </p>
+              <div className="mt-2 flex max-w-xl gap-2">
+                <input
+                  className="field-input font-mono"
+                  maxLength={16}
+                  placeholder="NIK PIC TKU 16 digit"
+                  value={picNik}
+                  onChange={(e) => setPicNik(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && addPic(t.nitku)}
+                />
+                <button className="btn-secondary shrink-0" onClick={() => addPic(t.nitku)}>Tambah PIC TKU</button>
+              </div>
               {db.persons.length === 0 ? (
                 <p className="mt-1 text-[13px] text-ink-muted">
                   Daftarkan orang terlebih dahulu pada tab Orang &amp; Pihak Terkait.
@@ -272,6 +375,14 @@ function TkuSection({ entityTin }: { entityTin: string }) {
             <label className="field-label" htmlFor="td">Deskripsi TKU</label>
             <input id="td" className="field-input" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} />
           </div>
+          <div>
+            <label className="field-label" htmlFor="tkklu">KLU TKU</label>
+            <input id="tkklu" className="field-input font-mono" placeholder="Contoh: 85491" value={kluKode} onChange={(e) => setKluKode(e.target.value)} />
+          </div>
+          <div>
+            <label className="field-label" htmlFor="tkklud">Deskripsi KLU TKU</label>
+            <input id="tkklud" className="field-input" value={kluDeskripsi} onChange={(e) => setKluDeskripsi(e.target.value)} />
+          </div>
           <div className="md:col-span-2">
             <label className="field-label" htmlFor="ta">Alamat</label>
             <input id="ta" className="field-input" value={alamat} onChange={(e) => setAlamat(e.target.value)} />
@@ -306,6 +417,7 @@ function RoleSection({ entityTin }: { entityTin: string }) {
         d.roleAssignments.push({
           id: crypto.randomUUID(), personNik: nik, entityTin, role, scopeNitku,
         });
+        addAuditEvent(d, 'Menetapkan Role', `${nik} - ${role} - ${scopeNitku ?? 'CENTRAL'}`);
       }
     });
     setPicked([]);

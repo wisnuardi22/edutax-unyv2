@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, RefreshCw, Info } from 'lucide-react';
-import { loadDb, updateDb } from '@/lib/storage/db';
+import { addAuditEvent, loadDb, updateDb } from '@/lib/storage/db';
 import { ensureSeedData, MAIN_ACCOUNT_SEED } from '@/lib/domain/portal';
 
 /** Akun bersama satu kelas. Sengaja ditampilkan di layar sesuai brief. */
@@ -51,6 +51,7 @@ export default function LoginPage() {
         loggedInAt: new Date().toISOString(),
       };
       ensureSeedData(db);
+      addAuditEvent(db, 'Login', 'Masuk ke EduTax');
     });
     router.push('/portal');
   }

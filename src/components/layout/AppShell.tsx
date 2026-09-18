@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, RotateCcw, RefreshCw, Bell, HelpCircle } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
-import { resetDb } from '@/lib/storage/db';
+import { addAuditEvent, resetDb } from '@/lib/storage/db';
 import { PORTAL_NAV_MENU } from '@/lib/domain/portal';
 import { IdentitySwitcher } from './IdentitySwitcher';
 import { NavDropdown } from './NavDropdown';
@@ -75,6 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (d.session && entity) {
         d.session.impersonatingTin = tin;
         d.session.activeNitku = entity.nitkuPusat;
+        addAuditEvent(d, 'Impersonating', `${entity.tin} ${entity.name}`);
       }
     });
   }

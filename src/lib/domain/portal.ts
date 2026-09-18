@@ -8,6 +8,17 @@ import type { Database } from '@/lib/storage/db';
  */
 export const MAIN_ACCOUNT_SEED = { nik: '3271022601770007', name: 'RAKA' };
 
+export const PRACTICE_PERSON_SEEDS = [
+  {
+    nik: '1871121205870009',
+    nama: 'Ramda',
+    alamat: 'Jl. Pendidikan No. 1, Yogyakarta',
+    negara: 'Indonesia',
+    email: 'ramda@edutax.ac.id',
+    phone: '081234567890',
+  },
+] as const;
+
 export const SEED_ENTITY = {
   tin: '0012345678910000',
   name: 'PT KARYA MANDIRI SEJAHTERA',
@@ -55,6 +66,12 @@ export function ensureSeedData(db: Database) {
       phone: '+6281999760161',
       signingCredential: null,
     };
+  }
+
+  for (const person of PRACTICE_PERSON_SEEDS) {
+    if (!db.persons.some((p) => p.nik === person.nik)) {
+      db.persons.push({ ...person, padan: true });
+    }
   }
 }
 

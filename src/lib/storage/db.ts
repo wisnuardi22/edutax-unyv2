@@ -2,6 +2,7 @@
 
 import type {
   BupotDoc, MainAccountProfile, Person, RelatedParty, RoleAssignment, Session, SptDoc, TaxEntity, Tku,
+  AuditEvent,
 } from '@/lib/domain/types';
 
 /**
@@ -30,6 +31,7 @@ export interface Database {
   mainAccountProfile: MainAccountProfile | null;
   /** Counter nomor bupot per badan per tahun, agar penomoran urut. */
   counters: Record<string, number>;
+  auditTrail: AuditEvent[];
 }
 
 export const EMPTY_DB: Database = {
@@ -44,6 +46,7 @@ export const EMPTY_DB: Database = {
   session: null,
   mainAccountProfile: null,
   counters: {},
+  auditTrail: [],
 };
 
 const KEY = `${PREFIX}.db`;
@@ -59,10 +62,20 @@ export function loadDb(): Database {
     if (!raw) return structuredClone(EMPTY_DB);
     const parsed = JSON.parse(raw) as Database;
     if (parsed.schemaVersion !== SCHEMA_VERSION) return structuredClone(EMPTY_DB);
-    return { ...structuredClone(EMPTY_DB), ...parsed };
+    return { ...structuredClone(EMPTY_DB), ...parsed, auditTrail: parsed.auditTrail ?? [] };
   } catch {
     return structuredClone(EMPTY_DB);
   }
+}
+
+export function addAuditEvent(db: Database, action: string, context: string) {
+  db.auditTrail.push({
+    id: crypto.randomUUID(),
+    at: new Date().toISOString(),
+    actorNik: db.session?.personNik ?? 'SYSTEM',
+    action,
+    context,
+  });
 }
 
 export function saveDb(db: Database) {
