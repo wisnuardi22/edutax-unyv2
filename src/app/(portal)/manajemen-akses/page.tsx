@@ -214,7 +214,7 @@ function PersonSection() {
           <input type="checkbox" checked={padan} onChange={(e) => setPadan(e.target.checked)} />
           NIK sudah padan dengan NPWP
           <span className="text-ink-muted">
-            — hilangkan centang untuk melatih kasus NIK tidak terbaca di Coretax
+            - hilangkan centang untuk melatih kasus NIK tidak terbaca di Coretax
           </span>
         </label>
         {error && <p role="alert" className="mt-3 text-sm text-bad">{error}</p>}
@@ -334,7 +334,7 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
           </div>
 
           <div className="space-y-3">
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-3">
               <div className="md:col-span-2">
                 <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" value={jenis} onChange={(e) => setJenis(e.target.value)}>
                   {['Kantor Cabang', 'Gudang', 'Unit Pemasaran', 'Unit Produksi', 'Unit Distribusi', 'Manajemen'].map((o) => (
@@ -390,11 +390,11 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
               <div className="md:col-span-2">
                 <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
-              <div className="md:col-span-2">
-                <div className="grid gap-3 md:grid-cols-2">
-                  <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-02" />
-                  <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-31" />
-                </div>
+              <div>
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-02" readOnly />
+              </div>
+              <div>
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-31" readOnly />
               </div>
               <div className="md:col-span-2">
                 <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
