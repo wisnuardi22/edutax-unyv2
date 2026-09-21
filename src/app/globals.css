@@ -33,6 +33,9 @@
   .pdf-compact-form .field-input {
     @apply px-2.5 py-2 text-[12.5px] leading-5;
   }
+  .pdf-compact-form .pdf-label-list > p {
+    @apply flex h-11 items-center;
+  }
   .pdf-compact-form .space-y-3 > * + * {
     margin-top: 0.5rem;
   }

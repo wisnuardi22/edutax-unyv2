@@ -305,7 +305,7 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(170px,200px)_minmax(0,1fr)]">
-          <div className="space-y-3 pt-1 text-[12.5px] font-medium text-ink">
+          <div className="pdf-label-list space-y-3 pt-1 text-[12.5px] font-medium text-ink">
             <p className="pt-1.5">Jenis Alamat</p>
             <p className="pt-1.5">Detail Alamat*</p>
             <p className="pt-1.5">RT*</p>
