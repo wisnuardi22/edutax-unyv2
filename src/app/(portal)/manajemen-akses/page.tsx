@@ -298,46 +298,45 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="pdf-compact-form space-y-4">
       <div className="rounded-card border border-line bg-white p-4 shadow-card sm:p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="h-0" aria-hidden="true" />
+        <div className="mb-3 flex items-center justify-end">
           <button type="button" aria-label="Tutup" className="text-2xl leading-none text-ink-muted">×</button>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-[minmax(170px,200px)_minmax(0,1fr)]">
-          <div className="space-y-3 pt-1 text-[15px] font-medium text-ink">
-            <p className="pt-2">Jenis Alamat</p>
-            <p className="pt-2">Detail Alamat*</p>
-            <p className="pt-2">RT*</p>
-            <p className="pt-2">RW*</p>
-            <p className="pt-2">Provinsi*</p>
-            <p className="pt-2">Kota/Kabupaten*</p>
-            <p className="pt-2">Kecamatan*</p>
-            <p className="pt-2">Kelurahan/Desa*</p>
-            <p className="pt-2">Kode Wilayah</p>
-            <p className="pt-2">Kode Pos*</p>
-            <p className="pt-2">Data Geometri</p>
-            <p className="pt-2">Seksi Pengawasan</p>
-            <p className="pt-2">Lokasi yang disewa?</p>
-            <p className="pt-2">Tanggal Mulai*</p>
-            <p className="pt-2">Tanggal Berakhir</p>
-            <p className="pt-2">Token Retail</p>
-            <p className="pt-2">Kawasan Bebas</p>
-            <p className="pt-2">Kawasan Ekonomi Khusus</p>
-            <p className="pt-2">Tempat Penimbunan Berikat?</p>
-            <p className="pt-2">Nomor Surat Keputusan</p>
-            <p className="pt-2">Decree Number Date Valid From</p>
-            <p className="pt-2">Decree Number Date Valid To</p>
-            <p className="pt-2">Kantor Virtual</p>
-            <p className="pt-2">Kode KPP</p>
-            <p className="pt-2">Alamat utama KPP</p>
+          <div className="space-y-3 pt-1 text-[12.5px] font-medium text-ink">
+            <p className="pt-1.5">Jenis Alamat</p>
+            <p className="pt-1.5">Detail Alamat*</p>
+            <p className="pt-1.5">RT*</p>
+            <p className="pt-1.5">RW*</p>
+            <p className="pt-1.5">Provinsi*</p>
+            <p className="pt-1.5">Kota/Kabupaten*</p>
+            <p className="pt-1.5">Kecamatan*</p>
+            <p className="pt-1.5">Kelurahan/Desa*</p>
+            <p className="pt-1.5">Kode Wilayah</p>
+            <p className="pt-1.5">Kode Pos*</p>
+            <p className="pt-1.5">Data Geometri</p>
+            <p className="pt-1.5">Seksi Pengawasan</p>
+            <p className="pt-1.5">Lokasi yang disewa?</p>
+            <p className="pt-1.5">Tanggal Mulai*</p>
+            <p className="pt-1.5">Tanggal Berakhir</p>
+            <p className="pt-1.5">Token Retail</p>
+            <p className="pt-1.5">Kawasan Bebas</p>
+            <p className="pt-1.5">Kawasan Ekonomi Khusus</p>
+            <p className="pt-1.5">Tempat Penimbunan Berikat?</p>
+            <p className="pt-1.5">Nomor Surat Keputusan</p>
+            <p className="pt-1.5">Decree Number Date Valid From</p>
+            <p className="pt-1.5">Decree Number Date Valid To</p>
+            <p className="pt-1.5">Kantor Virtual</p>
+            <p className="pt-1.5">Kode KPP</p>
+            <p className="pt-1.5">Alamat utama KPP</p>
           </div>
 
           <div className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
               <div className="md:col-span-2">
-                <select className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" value={jenis} onChange={(e) => setJenis(e.target.value)}>
+                <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" value={jenis} onChange={(e) => setJenis(e.target.value)}>
                   {['Kantor Cabang', 'Gudang', 'Unit Pemasaran', 'Unit Produksi', 'Unit Distribusi', 'Manajemen'].map((o) => (
                     <option key={o}>{o}</option>
                   ))}
@@ -345,81 +344,81 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
               </div>
 
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Detail alamat" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Detail alamat" />
               </div>
 
               <div>
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="001" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="001" />
               </div>
               <div>
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="002" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="002" />
               </div>
 
               <div className="md:col-span-2">
-                <select className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
+                <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
                   <option>Jawa Timur</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <select className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
+                <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
                   <option>Kota Surabaya</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <select className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
+                <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
                   <option>Rungkut</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <select className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
+                <select className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none">
                   <option>Penjaringan Sari</option>
                 </select>
               </div>
 
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none font-mono" value={subunit} onChange={(e) => setSubunit(e.target.value)} maxLength={6} placeholder="000001" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none font-mono" value={subunit} onChange={(e) => setSubunit(e.target.value)} maxLength={6} placeholder="000001" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="60297" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="60297" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="Data geometri" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="Data geometri" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
                 <div className="grid gap-3 md:grid-cols-2">
-                  <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-02" />
-                  <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-31" />
+                  <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-02" />
+                  <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" type="date" value="2025-07-31" />
                 </div>
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="G-123" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="G-123" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="dd-mm-yyyy" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="dd-mm-yyyy" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="dd-mm-yyyy" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="dd-mm-yyyy" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="" />
               </div>
               <div className="md:col-span-2">
-                <input className="field-input !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="615 - Kantor Pelayanan Pajak Pratama Surabaya Rungkut" />
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="615 - Kantor Pelayanan Pajak Pratama Surabaya Rungkut" />
               </div>
             </div>
 

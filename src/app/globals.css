@@ -17,12 +17,24 @@
 
 @layer components {
   .field-label {
-    @apply mb-1.5 block text-[13px] font-medium text-ink;
+    @apply mb-1 block text-[12px] font-semibold tracking-[0.01em] text-ink;
   }
   .field-input {
-    @apply w-full rounded-md border border-line bg-white px-3 py-2.5 text-sm
+    @apply w-full rounded-md border border-line bg-white px-2.5 py-2 text-[12.5px] leading-5
            placeholder:text-ink-muted/70 focus:border-brand-500 focus:outline-none
            focus:ring-2 focus:ring-brand-500/25;
+  }
+  .pdf-compact-form {
+    @apply text-[12.5px];
+  }
+  .pdf-compact-form .field-label {
+    @apply text-[12px] font-semibold;
+  }
+  .pdf-compact-form .field-input {
+    @apply px-2.5 py-2 text-[12.5px] leading-5;
+  }
+  .pdf-compact-form .space-y-3 > * + * {
+    margin-top: 0.5rem;
   }
   .btn-primary {
     @apply inline-flex items-center justify-center gap-2 rounded-md bg-accent px-4 py-2.5
