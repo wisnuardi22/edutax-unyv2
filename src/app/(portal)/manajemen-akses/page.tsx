@@ -292,110 +292,189 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
       if (t.picNiks.includes(nik)) {
         t.picNiks = t.picNiks.filter((n) => n !== nik);
       } else {
-        // Pusat hanya boleh punya satu PIC; TKU boleh lebih dari satu.
         t.picNiks = isPusat ? [nik] : [...t.picNiks, nik];
       }
     });
   }
 
   return (
-    <>
-      <section className="rounded-card bg-white p-5 shadow-card">
-        <h1 className="font-semibold">Tempat Kegiatan Usaha / Sub Unit</h1>
-        <p className="mt-1 text-sm text-ink-muted">
-          Sejak PMK-81/2024 cabang tidak lagi punya NPWP sendiri. Identitasnya adalah NITKU:
-          NPWP 16 digit ditambah 6 digit subunit, dengan pusat selalu 000000.
-        </p>
+    <section className="space-y-4">
+      <div className="pdf-header">
+        <span className="pdf-dot" aria-hidden="true" />
+        <span>
+          Penambahan <span className="pdf-inline">Hak Akses</span> – <span className="text-brand-800">PIC TKU</span>
+        </span>
+      </div>
 
-        <div className="mt-4 space-y-3">
-          {tkus.map((t) => (
-            <article key={t.nitku} className="rounded-md border border-line p-3">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <span className="font-mono text-[13px]">{t.nitku}</span>
-                <span className="font-medium">{t.nama || '(tanpa nama)'}</span>
-                <span className="rounded bg-brand-50 px-2 py-0.5 text-xxs text-brand-700">{t.jenis}</span>
-              </div>
-              <p className="mt-1 text-[13px] text-ink-muted">{t.alamat}</p>
-              <p className="mt-1 text-[13px] text-ink-muted">KLU: {t.kluKode || '—'} {t.kluDeskripsi && `— ${t.kluDeskripsi}`}</p>
+      <div className="pdf-form-shell rounded-card p-4 md:p-5">
+        <div className="mb-5 flex items-center justify-between gap-4">
+          <h2 className="text-[clamp(1.4rem,2vw,2.1rem)] font-semibold text-brand-900">
+            Tambahkan Tempat Kegiatan Usaha Baru
+          </h2>
+          <button type="button" aria-label="Tutup" className="text-2xl font-light text-ink-muted">×</button>
+        </div>
 
-              <p className="mt-3 text-[13px] font-medium">
-                PIC TKU {t.nitku.endsWith('000000') && <span className="text-ink-muted">(pusat, maksimal 1 orang)</span>}
-              </p>
-              <div className="mt-2 flex max-w-xl gap-2">
-                <input
-                  className="field-input font-mono"
-                  maxLength={16}
-                  placeholder="NIK PIC TKU 16 digit"
-                  value={picNik}
-                  onChange={(e) => setPicNik(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addPic(t.nitku)}
-                />
-                <button className="btn-secondary shrink-0" onClick={() => addPic(t.nitku)}>Tambah PIC TKU</button>
-              </div>
-              {db.persons.length === 0 ? (
-                <p className="mt-1 text-[13px] text-ink-muted">
-                  Daftarkan orang terlebih dahulu pada tab Orang &amp; Pihak Terkait.
-                </p>
-              ) : (
-                <div className="mt-1 flex flex-wrap gap-2">
-                  {db.persons.map((p) => (
-                    <label key={p.nik} className="flex items-center gap-1.5 rounded border border-line px-2 py-1 text-[13px]">
-                      <input
-                        type="checkbox"
-                        checked={t.picNiks.includes(p.nik)}
-                        onChange={() => togglePic(t.nitku, p.nik)}
-                      />
-                      {p.nama || p.nik}
-                    </label>
+        <div className="pdf-form-grid">
+          <div className="pdf-label-col space-y-5">
+            <p>Jenis Alamat</p>
+            <p>Detail Alamat*</p>
+            <p>RT*</p>
+            <p>RW*</p>
+            <p>Provinsi*</p>
+            <p>Kota/Kabupaten*</p>
+            <p>Kecamatan*</p>
+            <p>Kelurahan/Desa*</p>
+            <p>Kode Wilayah</p>
+            <p>Kode Pos*</p>
+            <p>Data Geometri</p>
+            <p>Seksi Pengawasan</p>
+            <p>Lokasi yang disewa?</p>
+            <p>Tanggal Mulai*</p>
+            <p>Tanggal Berakhir</p>
+            <p>Token Retail</p>
+            <p>Kawasan Bebas</p>
+            <p>Kawasan Ekonomi Khusus</p>
+            <p>Tempat Penimbunan Berikat?</p>
+            <p>Nomor Surat Keputusan</p>
+            <p>Decree Number Date Valid From</p>
+            <p>Decree Number Date Valid To</p>
+            <p>Kantor Virtual</p>
+            <p>Kode KPP</p>
+            <p>Alamat utama KPP</p>
+          </div>
+
+          <div className="pdf-form-fields">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="md:col-span-2">
+                <select className="pdf-field" value={jenis} onChange={(e) => setJenis(e.target.value)}>
+                  {['Kantor Cabang', 'Gudang', 'Unit Pemasaran', 'Unit Produksi', 'Unit Distribusi', 'Manajemen'].map((o) => (
+                    <option key={o}>{o}</option>
                   ))}
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Jalan / detail alamat" />
+              </div>
+              <div>
+                <input className="pdf-field" placeholder="001" />
+              </div>
+              <div>
+                <input className="pdf-field" placeholder="002" />
+              </div>
+              <div className="md:col-span-2">
+                <select className="pdf-field">
+                  <option>JAWA TIMUR</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select className="pdf-field">
+                  <option>KOTA SURABAYA</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select className="pdf-field">
+                  <option>RUNGKUT</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <select className="pdf-field">
+                  <option>PENJARINGANSARI</option>
+                </select>
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" value={subunit} onChange={(e) => setSubunit(e.target.value)} maxLength={6} placeholder="000001" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="60297" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="Data geometri" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <div className="grid gap-3 md:grid-cols-2">
+                  <input className="pdf-field" type="date" value="2025-07-02" />
+                  <input className="pdf-field" type="date" value="2025-07-31" />
                 </div>
-              )}
-            </article>
-          ))}
-        </div>
-      </section>
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="G-123" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="dd-mm-yyyy" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="dd-mm-yyyy" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="" />
+              </div>
+              <div className="md:col-span-2">
+                <input className="pdf-field" placeholder="615-Kantor Pelayanan Pajak Pratama Surabaya Rungkut" />
+              </div>
+            </div>
 
-      <section className="rounded-card bg-white p-5 shadow-card">
-        <h2 className="font-semibold">Tambah TKU</h2>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div>
-            <label className="field-label" htmlFor="sub">Subunit 6 digit</label>
-            <input id="sub" className="field-input font-mono" maxLength={6} placeholder="000001"
-              value={subunit} onChange={(e) => setSubunit(e.target.value)} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="jn">Jenis TKU</label>
-            <select id="jn" className="field-input" value={jenis} onChange={(e) => setJenis(e.target.value)}>
-              {['Kantor Cabang', 'Gudang', 'Unit Pemasaran', 'Unit Produksi', 'Unit Distribusi', 'Manajemen'].map((o) => (
-                <option key={o}>{o}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="field-label" htmlFor="tn">Nama TKU</label>
-            <input id="tn" className="field-input" value={nama} onChange={(e) => setNama(e.target.value)} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="td">Deskripsi TKU</label>
-            <input id="td" className="field-input" value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="tkklu">KLU TKU</label>
-            <input id="tkklu" className="field-input font-mono" placeholder="Contoh: 85491" value={kluKode} onChange={(e) => setKluKode(e.target.value)} />
-          </div>
-          <div>
-            <label className="field-label" htmlFor="tkklud">Deskripsi KLU TKU</label>
-            <input id="tkklud" className="field-input" value={kluDeskripsi} onChange={(e) => setKluDeskripsi(e.target.value)} />
-          </div>
-          <div className="md:col-span-2">
-            <label className="field-label" htmlFor="ta">Alamat</label>
-            <input id="ta" className="field-input" value={alamat} onChange={(e) => setAlamat(e.target.value)} />
+            <button type="button" className="pdf-btn-action mt-2" onClick={addTku}>
+              Simpan
+            </button>
           </div>
         </div>
-        {error && <p role="alert" className="mt-3 text-sm text-bad">{error}</p>}
-        <button className="btn-primary mt-4" onClick={addTku}>Simpan TKU</button>
-      </section>
-    </>
+
+        {error && <p role="alert" className="mt-4 text-sm text-bad">{error}</p>}
+
+        {tkus.length > 0 && (
+          <div className="mt-6 overflow-hidden rounded-md border border-line">
+            <table className="pdf-table">
+              <thead>
+                <tr>
+                  <th>Aksi</th>
+                  <th>NITKU / NIP PIC TKU</th>
+                  <th>Jenis TKU</th>
+                  <th>Nama TKU</th>
+                  <th>KLU TKU</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tkus.map((t) => (
+                  <tr key={t.nitku}>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <button type="button" className="rounded border border-brand-500 bg-white px-2 py-1 text-[11px] font-semibold text-brand-700">Edit</button>
+                        <button type="button" className="rounded border border-brand-500 bg-white px-2 py-1 text-[11px] font-semibold text-brand-700">Lihat</button>
+                      </div>
+                    </td>
+                    <td className="font-mono">{t.nitku}</td>
+                    <td>{t.jenis}</td>
+                    <td>{t.nama}</td>
+                    <td>{t.kluKode || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="pdf-note">
+          <p className="text-[clamp(1rem,1.8vw,1.6rem)] font-medium text-brand-900">
+            Gulir ke bawah hingga menemukan tombol “Simpan” <span className="font-bold">[7]</span>
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
