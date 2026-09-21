@@ -420,6 +420,9 @@ export function TkuSection({ entityTin }: { entityTin: string }) {
               <div className="md:col-span-2">
                 <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="615 - Kantor Pelayanan Pajak Pratama Surabaya Rungkut" />
               </div>
+              <div className="md:col-span-2">
+                <input className="field-input !h-11 !rounded-[6px] !border !border-[#d0d7e2] !bg-[#f5f7fa] !shadow-none" placeholder="Alamat utama KPP" />
+              </div>
             </div>
 
             <button type="button" className="btn-primary mt-2" onClick={addTku}>
