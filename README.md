@@ -308,31 +308,32 @@ adanya:
 
 ## Urutan pengerjaan berikutnya
 
-1. **Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`.**
-   Saat ini `SignDialog` menerima kata sandi apa saja tanpa memeriksa apakah
+1. ~~Terapkan `filterVisibleBupots()`/`canDraft`/`canSign` pada tabel BPMP dan
+   halaman SPT.~~ **Selesai.** Lihat juga `canDraftSpt`/`canSignSpt`/
+   `filterVisibleSpts` (khusus SPT — hanya pihak terkait pusat, karena SPT
+   tidak punya field NITKU) di `src/lib/auth/access.ts`.
+2. ~~Salin bentuk formulir BPMP untuk BP21~~ **Selesai** — lihat
+   `ebupot/bp21/page.tsx` dan tabel Tax Object Name di `lib/domain/bp21.ts`
+   (tarifnya flat/disederhanakan untuk simulasi kelas, lihat catatan PENTING
+   di file tersebut). **BPA1, BPA2, BP26 masih perlu dibangun** — BPA2 dan
+   BPA1 formnya jauh lebih kompleks (rekap tahunan multi-komponen, carry-in
+   dari pemberi kerja sebelumnya), tidak bisa sekadar salin BPMP/BP21.
+3. Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`. Saat
+   ini `SignDialog` menerima kata sandi apa saja tanpa memeriksa apakah
    kredensial sudah pernah didaftarkan lewat Permohonan Kode Otorisasi/
-   Sertifikat Digital. Idealnya: dropdown provider di `SignDialog` dibatasi ke
-   provider yang sudah terdaftar, ID Penandatangan terisi otomatis, dan bila
-   belum ada kredensial sama sekali, tombol tanda tangan diarahkan dulu ke
-   Portal Saya untuk mendaftar.
-2. Terapkan `filterVisibleBupots()` dari `src/lib/auth/access.ts` pada tabel
-   BPMP dan lampiran SPT, agar pembatasan pusat vs PIC TKU benar-benar
-   terasa. Fungsi ini (dan `canDraft`/`canSign`/`isPusat`) sudah menerima
-   parameter `parties: RelatedParty[]` untuk bypass akses PIC Badan — tinggal
-   dipanggil dengan `db.relatedParties` dari halaman eBupot/SPT, belum ada
-   satu pun halaman yang benar-benar memanggilnya hari ini.
-3. Filter dropdown "Taxpayers" pada `IdentitySwitcher` berdasarkan
+   Sertifikat Digital.
+4. Filter dropdown "Taxpayers" pada `IdentitySwitcher` berdasarkan
    `RoleAssignment` orang yang login — saat ini semua Badan terdaftar
    ditampilkan tanpa memeriksa apakah orang tersebut benar-benar diberi role.
-4. Salin bentuk formulir BPMP untuk BP21, BPA1, BPA2, dan BP26 — alurnya sama,
-   yang berbeda hanya isi form. Begitu ada, tab L-II dan L-III otomatis terisi
-   karena sudah membaca dari `db.bupots` dengan `kind` yang sesuai.
-5. Modul BPPU untuk Unifikasi beserta SPT Masa Unifikasi (Induk, Daftar-I,
+5. `ModuleSwitcher` (`src/components/layout/ModuleSwitcher.tsx`) baru
+   stopgap ringan di sidebar eBupot untuk mencapai BPMP/BP21 — belum jadi
+   dropdown "Pilih Modul eBupot" yang sesungguhnya di AppShell.
+6. Modul BPPU untuk Unifikasi beserta SPT Masa Unifikasi (Induk, Daftar-I,
    Daftar-II), memakai pola yang sama dengan SPT PPh 21/26.
-6. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
+7. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
    saat ini kedua status hanya siap menampung data bila suatu saat diisi lewat
    simulasi penolakan DJP atau pembatalan oleh Wajib Pajak.
-7. Impor XML dan ekspor CSV/Excel/PDF mengikuti kolom template Coretax:
+8. Impor XML dan ekspor CSV/Excel/PDF mengikuti kolom template Coretax:
    `TIN`, `TaxPeriodMonth`, `TaxPeriodYear`, `CounterpartOption`,
    `CounterpartPassport`, `CounterpartTin`, `StatusTaxExemption`, `Position`,
    `TaxCertificate`, `TaxObjectCode`, `Gross`, `Rate`,
@@ -343,6 +344,15 @@ adanya:
 `src/lib/domain/ter.ts` baru memuat sebagian bracket TER sebagai contoh bentuk
 data. Lengkapi dari Lampiran PMK-168/2023 dan uji dengan contoh perhitungan di
 lampiran tersebut, karena angka inilah yang akan dipelajari mahasiswa.
+
+`src/lib/domain/bp21.ts` menghitung PPh sebagai Bruto × Deemed Net Income% ×
+Rate% (bukan flat Bruto × Rate%), persis contoh pada slide. Tapi hanya entri
+"Imbalan kepada Tenaga Ahli" (kode 21-100-07, deemed 50%, rate 5%) yang
+terverifikasi dari PDF panduan — entri Tax Object Name lainnya masih
+perkiraan dan perlu dicocokkan ke referensi resmi (lihat catatan PENTING di
+file tersebut) sebelum dipakai menilai ketepatan angka mahasiswa. Field
+"ID Place of Business Activity of Income Recipient" (NITKU milik penerima
+penghasilan) juga belum ada di data model — baru NITKU pemotong yang dipakai.
 
 ## Deploy ke Vercel
 

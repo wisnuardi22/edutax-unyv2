@@ -1,0 +1,481 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+import { useDb } from '@/lib/storage/useDb';
+import { nextWithholdingNumber } from '@/lib/storage/db';
+import {
+  BP21_REFERENCE_DOCUMENT_TYPES, BP21_TAX_FACILITY_OPTIONS, BP21_TAX_OBJECTS,
+  taxObjectByName, withheldByTaxObject,
+} from '@/lib/domain/bp21';
+import { PTKP_OPTIONS } from '@/lib/domain/ter';
+import { tabOf, type DocTab } from '@/lib/domain/types';
+import { SignDialog } from '@/components/ui/SignDialog';
+import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
+import { ModuleSwitcher } from '@/components/layout/ModuleSwitcher';
+
+/**
+ * Bukti Pemotongan PPh Pasal 21 Selain Pegawai Tetap (BP21), slide 90-100.
+ * Alur, tiga tab, dan tombol aksi disalin persis dari EBUPOT MP
+ * (`ebupot/bpmp/page.tsx`) — yang berbeda hanya isi formulir: General
+ * Information, Income Tax (Tax Object Name meng-auto-isi Article/Code/
+ * Status/Revenue Code), dan Reference Document [12]-[15].
+ */
+
+const TABS: { key: DocTab; label: string }[] = [
+  { key: 'BELUM_TERBIT', label: 'Belum Terbit' },
+  { key: 'TELAH_TERBIT', label: 'Telah Terbit' },
+  { key: 'TIDAK_VALID', label: 'Tidak Valid' },
+];
+
+const TIN_TIDAK_PADAN = '9990000000999000';
+const rupiah = (n: number) => n.toLocaleString('id-ID');
+
+export default function Bp21Page() {
+  const { db, mutate } = useDb();
+  const [tab, setTab] = useState<DocTab>('BELUM_TERBIT');
+  const [formOpen, setFormOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [signing, setSigning] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+
+  const entityTin = db.session?.impersonatingTin ?? null;
+  const rows = useMemo(() => {
+    if (!db.session) return [];
+    const visible = filterVisibleBupots(
+      db.bupots.filter((b) => b.kind === 'BP21'),
+      db.roleAssignments,
+      db.session,
+      db.relatedParties,
+    );
+    return visible.filter((b) => tabOf(b.status) === tab);
+  }, [db.bupots, db.roleAssignments, db.relatedParties, db.session, tab]);
+
+  // Formulir — General Information
+  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [year, setYear] = useState(new Date().getFullYear());
+  const [tin, setTin] = useState('');
+  const [nama, setNama] = useState('');
+
+  // Formulir — Income Tax
+  const [ptkp, setPtkp] = useState('K/0');
+  const [taxFacility, setTaxFacility] = useState<string>(BP21_TAX_FACILITY_OPTIONS[0]);
+  const [taxObjectName, setTaxObjectName] = useState(BP21_TAX_OBJECTS[0].name);
+  const [gross, setGross] = useState(0);
+
+  // Formulir — Reference Document
+  const [refDocType, setRefDocType] = useState<string>(BP21_REFERENCE_DOCUMENT_TYPES[0]);
+  const [refDocNumber, setRefDocNumber] = useState('');
+  const [refDocDate, setRefDocDate] = useState('');
+
+  const taxObject = taxObjectByName(taxObjectName);
+  const preview = withheldByTaxObject(taxObjectName, gross);
+
+  if (!entityTin) {
+    return (
+      <p className="rounded-card bg-white p-5 text-sm shadow-card">
+        Pilih badan yang Anda wakili di menu Portal Saya sebelum membuat bukti pemotongan.
+      </p>
+    );
+  }
+
+  const canDraftBp21 = canDraft(db.roleAssignments, db.session!, 'BP21', db.relatedParties);
+  const canSignBp21 = canSign(db.roleAssignments, db.session!, 'BP21', db.relatedParties);
+
+  if (!canDraftBp21 && !canSignBp21) {
+    return (
+      <p className="rounded-card bg-white p-5 text-sm shadow-card">
+        {explainDenied('draft', 'BP21')}
+      </p>
+    );
+  }
+
+  function resetForm() {
+    setTin(''); setNama(''); setGross(0);
+    setRefDocNumber(''); setRefDocDate('');
+  }
+
+  function saveDraft(submit: boolean) {
+    if (!canDraftBp21) { setNotice(explainDenied('draft', 'BP21')); return; }
+    const cleanTin = tin.replace(/\D/g, '');
+    const person = db.persons.find((p) => p.nik === cleanTin || p.npwp16 === cleanTin);
+    // NIK/NPWP yang tidak padan diganti sentinel — sama seperti EBUPOT MP.
+    const resolvedTin = cleanTin && (!person || person.padan) ? cleanTin : TIN_TIDAK_PADAN;
+
+    mutate((d) => {
+      d.bupots.push({
+        id: crypto.randomUUID(),
+        kind: 'BP21',
+        entityTin: entityTin!,
+        status: submit ? 'SUBMITTED' : 'DRAFT',
+        withholdingNumber: null,
+        taxPeriodMonth: month,
+        taxPeriodYear: year,
+        counterpartTin: resolvedTin,
+        counterpartName: person?.nama ?? nama,
+        taxObjectCode: taxObject.taxObjectCode,
+        gross,
+        rate: preview.rate,
+        withheld: preview.withheld,
+        idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
+        createdByNik: d.session!.personNik,
+        createdAt: new Date().toISOString(),
+        signature: null,
+        cancelledAt: null,
+        fields: {
+          ptkp,
+          taxFacility,
+          taxObjectName,
+          incomeTaxStatus: taxObject.incomeTaxStatus,
+          deemedNetIncome: taxObject.deemedNetIncome,
+          revenueCode: taxObject.revenueCode,
+          referenceDocumentType: refDocType,
+          referenceDocumentNumber: refDocNumber,
+          referenceDocumentDate: refDocDate,
+        },
+      });
+    });
+
+    setNotice(
+      resolvedTin === TIN_TIDAK_PADAN
+        ? `Data tersimpan, tetapi NIK/NPWP ${cleanTin || '(kosong)'} tidak dikenali dan dicatat sebagai ${TIN_TIDAK_PADAN}. Bukti potong ini tidak dapat dikreditkan. Padankan NIK/NPWP penerima penghasilan terlebih dahulu.`
+        : 'Data bukti pemotongan tersimpan pada daftar Belum Terbit.',
+    );
+    setFormOpen(false);
+    resetForm();
+  }
+
+  function issue(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
+    if (!password || !canSignBp21) return;
+    mutate((d) => {
+      for (const id of selected) {
+        const doc = d.bupots.find((b) => b.id === id);
+        if (!doc || doc.status === 'ISSUED' || doc.status === 'CANCELLED') continue;
+        doc.status = 'ISSUED';
+        doc.withholdingNumber = nextWithholdingNumber(d, doc.entityTin, doc.taxPeriodYear);
+        doc.signature = {
+          provider,
+          signerNik: d.session!.personNik,
+          signedAt: new Date().toISOString(),
+        };
+      }
+    });
+    setSigning(false);
+    setSelected([]);
+    setNotice('Bukti pemotongan diterbitkan dan masuk ke draft SPT Masa PPh Pasal 21.');
+    setTab('TELAH_TERBIT');
+  }
+
+  function cancel() {
+    if (!canSignBp21) return;
+    mutate((d) => {
+      for (const id of selected) {
+        const doc = d.bupots.find((b) => b.id === id);
+        if (doc?.status === 'ISSUED') {
+          doc.status = 'CANCELLED';
+          doc.cancelledAt = new Date().toISOString();
+        }
+      }
+    });
+    setSelected([]);
+    setNotice('Bukti pemotongan dibatalkan dan berpindah ke daftar Tidak Valid.');
+  }
+
+  function remove() {
+    if (!canDraftBp21) return;
+    mutate((d) => {
+      d.bupots = d.bupots.filter((b) => !(selected.includes(b.id) && b.status !== 'ISSUED'));
+    });
+    setSelected([]);
+  }
+
+  const viewDoc = viewing ? db.bupots.find((b) => b.id === viewing) : null;
+
+  return (
+    <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,20%)_minmax(0,1fr)]">
+      <aside className="rounded-card bg-white p-3 shadow-card">
+        <ModuleSwitcher active="BP21" />
+        <p className="px-2 pb-2 pt-3 text-[13px] font-semibold text-brand-800">
+          Bukti Pemotongan Selain Pegawai Tetap
+        </p>
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => { setTab(t.key); setSelected([]); }}
+            className={`block w-full rounded px-2 py-2 text-left text-[13px] ${
+              tab === t.key ? 'bg-brand-50 font-semibold text-brand-700' : 'hover:bg-canvas'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </aside>
+
+      <section className="min-w-0 rounded-card bg-white p-4 shadow-card">
+        <div className="flex flex-wrap items-center gap-2">
+          <h1 className="font-semibold">EBUPOT BP21 — {TABS.find((t) => t.key === tab)!.label}</h1>
+          <div className="ml-auto flex gap-2">
+            {tab === 'BELUM_TERBIT' && (
+              <>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setFormOpen(true)}
+                  disabled={!canDraftBp21}
+                  title={!canDraftBp21 ? explainDenied('draft', 'BP21') : undefined}
+                >
+                  + Create eBupot BP21
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={remove}
+                  disabled={!selected.length || !canDraftBp21}
+                  title={!canDraftBp21 ? explainDenied('draft', 'BP21') : undefined}
+                >
+                  Hapus
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={() => setSigning(true)}
+                  disabled={!selected.length || !canSignBp21}
+                  title={!canSignBp21 ? explainDenied('sign', 'BP21') : undefined}
+                >
+                  Terbitkan
+                </button>
+              </>
+            )}
+            {tab === 'TELAH_TERBIT' && (
+              <button
+                className="btn-secondary"
+                onClick={cancel}
+                disabled={!selected.length || !canSignBp21}
+                title={!canSignBp21 ? explainDenied('sign', 'BP21') : undefined}
+              >
+                Batal
+              </button>
+            )}
+          </div>
+        </div>
+
+        {notice && (
+          <p className="mt-3 rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-[13px] text-brand-800">
+            {notice}
+          </p>
+        )}
+
+        <div className="mt-3 overflow-x-auto">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th className="w-10" />
+                <th>Masa Pajak</th>
+                <th>Nomor Bupot</th>
+                <th>TIN/NIK</th>
+                <th>Nama</th>
+                <th>Objek Pajak</th>
+                <th className="text-right">Bruto</th>
+                <th className="text-right">Tarif</th>
+                <th className="text-right">PPh Dipotong</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="py-8 text-center text-ink-muted">
+                    Belum ada bukti pemotongan pada daftar ini.
+                  </td>
+                </tr>
+              )}
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      aria-label={`Pilih bupot ${r.counterpartName}`}
+                      checked={selected.includes(r.id)}
+                      onChange={(e) =>
+                        setSelected((s) => (e.target.checked ? [...s, r.id] : s.filter((x) => x !== r.id)))
+                      }
+                    />
+                  </td>
+                  <td>{String(r.taxPeriodMonth).padStart(2, '0')}/{r.taxPeriodYear}</td>
+                  <td className="font-mono">{r.withholdingNumber ?? '—'}</td>
+                  <td className={`font-mono ${r.counterpartTin === TIN_TIDAK_PADAN ? 'text-bad' : ''}`}>
+                    {r.counterpartTin}
+                  </td>
+                  <td>{r.counterpartName}</td>
+                  <td className="text-xxs">{String(r.fields.taxObjectName ?? '—')}</td>
+                  <td className="text-right">{rupiah(r.gross)}</td>
+                  <td className="text-right">{r.rate}%</td>
+                  <td className="text-right">{rupiah(r.withheld)}</td>
+                  <td>
+                    <button className="text-brand-600 hover:underline" onClick={() => setViewing(r.id)}>
+                      Lihat
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {formOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-900/40 p-4">
+          <div className="w-full max-w-3xl rounded-card bg-white p-5 shadow-card">
+            <h2 className="font-semibold">Formulir EBUPOT BP21</h2>
+
+            <p className="mt-3 text-[13px] font-semibold text-ink-muted">General Information</p>
+            <div className="mt-2 grid gap-3 md:grid-cols-3">
+              <div>
+                <label className="field-label" htmlFor="m">Tax Period (Masa Pajak)</label>
+                <select id="m" className="field-input" value={month} onChange={(e) => setMonth(+e.target.value)}>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="y">Tahun Pajak</label>
+                <input id="y" type="number" className="field-input" value={year} onChange={(e) => setYear(+e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label" htmlFor="tin">TIN (NPWP 16 digit / NIK)</label>
+                <input id="tin" className="field-input font-mono" maxLength={16} value={tin}
+                  onChange={(e) => setTin(e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="field-label" htmlFor="nm">Nama (otomatis bila TIN valid)</label>
+                <input id="nm" className="field-input" value={nama} onChange={(e) => setNama(e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label">ID Place of Business Activity</label>
+                <output className="field-input block bg-canvas font-mono text-xxs">
+                  {db.session?.activeNitku ?? `${entityTin}000000`}
+                </output>
+              </div>
+            </div>
+
+            <p className="mt-4 text-[13px] font-semibold text-ink-muted">Income Tax</p>
+            <div className="mt-2 grid gap-3 md:grid-cols-3">
+              <div>
+                <label className="field-label" htmlFor="p">Status of Tax Exemption (PTKP)</label>
+                <select id="p" className="field-input" value={ptkp} onChange={(e) => setPtkp(e.target.value)}>
+                  {PTKP_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="tf">Fasilitas Pajak</label>
+                <select id="tf" className="field-input" value={taxFacility} onChange={(e) => setTaxFacility(e.target.value)}>
+                  {BP21_TAX_FACILITY_OPTIONS.map((o) => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="ton">Tax Object Name</label>
+                <select id="ton" className="field-input" value={taxObjectName} onChange={(e) => setTaxObjectName(e.target.value)}>
+                  {BP21_TAX_OBJECTS.map((o) => <option key={o.name}>{o.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label">Tax Article</label>
+                <output className="field-input block bg-canvas">Pasal {taxObject.article}</output>
+              </div>
+              <div>
+                <label className="field-label">Tax Object Code</label>
+                <output className="field-input block bg-canvas font-mono">{taxObject.taxObjectCode}</output>
+              </div>
+              <div>
+                <label className="field-label">Income Tax Status</label>
+                <output className="field-input block bg-canvas">
+                  {taxObject.incomeTaxStatus === 'FINAL' ? 'Final' : 'Tidak Final'}
+                </output>
+              </div>
+              <div>
+                <label className="field-label">Deemed Net Income (%)</label>
+                <output className="field-input block bg-canvas">{taxObject.deemedNetIncome},00</output>
+              </div>
+              <div>
+                <label className="field-label">Rate (%)</label>
+                <output className="field-input block bg-canvas">{taxObject.rate},00</output>
+              </div>
+              <div>
+                <label className="field-label">Revenue Code (KAP-KJS)</label>
+                <output className="field-input block bg-canvas font-mono">{taxObject.revenueCode}</output>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="g">Penghasilan Bruto (Rp)</label>
+                <input id="g" type="number" className="field-input" value={gross}
+                  onChange={(e) => setGross(+e.target.value)} />
+              </div>
+              <div className="md:col-span-2">
+                <label className="field-label">Income Tax Withheld</label>
+                <output className="field-input block bg-canvas">
+                  {rupiah(preview.withheld)} ({rupiah(gross)} × {taxObject.deemedNetIncome}% × {taxObject.rate}%)
+                </output>
+              </div>
+            </div>
+
+            <p className="mt-4 text-[13px] font-semibold text-ink-muted">Reference Document</p>
+            <div className="mt-2 grid gap-3 md:grid-cols-3">
+              <div>
+                <label className="field-label" htmlFor="rdt">Document Type</label>
+                <select id="rdt" className="field-input" value={refDocType} onChange={(e) => setRefDocType(e.target.value)}>
+                  {BP21_REFERENCE_DOCUMENT_TYPES.map((o) => <option key={o}>{o}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="field-label" htmlFor="rdn">Document Number</label>
+                <input id="rdn" className="field-input" value={refDocNumber} onChange={(e) => setRefDocNumber(e.target.value)} />
+              </div>
+              <div>
+                <label className="field-label" htmlFor="rdd">Reference Document Date</label>
+                <input id="rdd" type="date" className="field-input" value={refDocDate} onChange={(e) => setRefDocDate(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end gap-2">
+              <button className="btn-secondary" onClick={() => setFormOpen(false)}>Tutup</button>
+              <button className="btn-secondary" onClick={() => saveDraft(false)}>Save Draft</button>
+              <button className="btn-primary" onClick={() => saveDraft(true)}>Submit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewDoc && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-900/40 p-4">
+          <div className="w-full max-w-lg rounded-card bg-white p-5 shadow-card">
+            <h2 className="font-semibold">Detail Bukti Pemotongan BP21</h2>
+            <dl className="mt-3 grid grid-cols-2 gap-y-2 text-[13px]">
+              <dt className="text-ink-muted">Nomor Bupot</dt><dd className="font-mono">{viewDoc.withholdingNumber ?? '—'}</dd>
+              <dt className="text-ink-muted">Masa Pajak</dt><dd>{String(viewDoc.taxPeriodMonth).padStart(2, '0')}/{viewDoc.taxPeriodYear}</dd>
+              <dt className="text-ink-muted">TIN/NIK</dt><dd className="font-mono">{viewDoc.counterpartTin}</dd>
+              <dt className="text-ink-muted">Nama</dt><dd>{viewDoc.counterpartName}</dd>
+              <dt className="text-ink-muted">Tax Object Name</dt><dd>{String(viewDoc.fields.taxObjectName ?? '—')}</dd>
+              <dt className="text-ink-muted">Tax Object Code</dt><dd className="font-mono">{viewDoc.taxObjectCode}</dd>
+              <dt className="text-ink-muted">Income Tax Status</dt><dd>{String(viewDoc.fields.incomeTaxStatus ?? '—')}</dd>
+              <dt className="text-ink-muted">Deemed Net Income</dt><dd>{String(viewDoc.fields.deemedNetIncome ?? '—')}%</dd>
+              <dt className="text-ink-muted">Fasilitas Pajak</dt><dd>{String(viewDoc.fields.taxFacility ?? '—')}</dd>
+              <dt className="text-ink-muted">Bruto</dt><dd>{rupiah(viewDoc.gross)}</dd>
+              <dt className="text-ink-muted">Rate</dt><dd>{viewDoc.rate}%</dd>
+              <dt className="text-ink-muted">PPh Dipotong</dt><dd>{rupiah(viewDoc.withheld)}</dd>
+              <dt className="text-ink-muted">Dokumen Referensi</dt>
+              <dd>{String(viewDoc.fields.referenceDocumentType ?? '—')} {String(viewDoc.fields.referenceDocumentNumber ?? '')}</dd>
+            </dl>
+            <div className="mt-5 flex justify-end">
+              <button className="btn-secondary" onClick={() => setViewing(null)}>Tutup</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {signing && (
+        <SignDialog
+          signerNik={db.session!.personNik}
+          onCancel={() => setSigning(false)}
+          onConfirm={issue}
+        />
+      )}
+    </div>
+  );
+}
