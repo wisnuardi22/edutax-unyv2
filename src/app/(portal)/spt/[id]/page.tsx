@@ -6,11 +6,17 @@ import { useDb } from '@/lib/storage/useDb';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { buildArticleSummary, totalNetPayable, type ArticleSummaryRow } from '@/lib/domain/sptCalc';
 import type { SptManualRows } from '@/lib/domain/types';
+import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
 
 /**
  * Halaman isi SPT Masa PPh Pasal 21/26. Lima tab dan susunan bagian mengikuti
  * slide 120-137 apa adanya: Halaman Utama (Induk, Identitas Pemotong, Article
  * 21/26 Income Tax, Declaration and Signature), lalu L-IA, L-IB, L-II, L-III.
+ *
+ * Role Akses dipisah dua: SPT_21_DRAFTER mengisi angka manual (SP2D/DTP/dst)
+ * pada bagian B & C, sementara SPT_21_SIGNER yang mengisi Deklarasi dan
+ * menekan tombol Bayar dan Lapor — meniru pembagian tugas penyiap vs
+ * penandatangan dokumen di Coretax asli.
  */
 
 const MONTHS = [
@@ -47,7 +53,22 @@ export default function SptEditorPage() {
     );
   }
 
-  const editable = spt.status === 'KONSEP';
+  const canDraftSptRole = canDraftSpt(db.roleAssignments, db.session!, spt.kind, db.relatedParties);
+  const canSignSptRole = canSignSpt(db.roleAssignments, db.session!, spt.kind, db.relatedParties);
+
+  if (spt.entityTin !== db.session?.impersonatingTin || (!canDraftSptRole && !canSignSptRole)) {
+    return (
+      <p className="rounded-card bg-white p-5 text-sm shadow-card">
+        {explainDeniedSpt('draft', spt.kind)}
+      </p>
+    );
+  }
+
+  const isKonsep = spt.status === 'KONSEP';
+  /** Angka manual (baris B/C) diisi oleh Drafter. */
+  const editable = isKonsep && canDraftSptRole;
+  /** Kotak Pernyataan & nama penandatangan diisi oleh Signer, persis sebelum menandatangani. */
+  const declarationEditable = isKonsep && canSignSptRole;
   const bpmpRows = bupots.filter(
     (b) => b.entityTin === spt.entityTin && b.kind === 'BPMP' && b.status === 'ISSUED'
       && b.taxPeriodMonth === spt.taxPeriodMonth && b.taxPeriodYear === spt.taxPeriodYear,
@@ -64,11 +85,12 @@ export default function SptEditorPage() {
   }
 
   function saveDraft() {
+    if (!canDraftSptRole) return;
     setNotice('Konsep SPT tersimpan.');
   }
 
   function submit(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
-    if (!password) return;
+    if (!password || !canSignSptRole) return;
     mutate((d) => {
       const s = d.spts.find((x) => x.id === id);
       if (!s) return;
@@ -99,6 +121,7 @@ export default function SptEditorPage() {
   }
 
   function pay() {
+    if (!canSignSptRole) return;
     mutate((d) => {
       const s = d.spts.find((x) => x.id === id);
       if (!s) return;
@@ -192,11 +215,11 @@ export default function SptEditorPage() {
             </div>
 
             {spt.status === 'MENUNGGU_PEMBAYARAN' && spt.billing && (
-              <BillingCard billing={spt.billing} onPay={pay} />
+              <BillingCard billing={spt.billing} onPay={pay} disabled={!canSignSptRole} />
             )}
 
             <Section title="D. Declaration and Signature">
-              {editable ? (
+              {declarationEditable ? (
                 <DeclarationForm
                   spt={spt}
                   personName={db.session!.personName}
@@ -213,13 +236,21 @@ export default function SptEditorPage() {
                 </div>
               )}
 
-              {editable && (
+              {isKonsep && (
                 <div className="mt-4 flex gap-2">
-                  <button className="btn-secondary" onClick={saveDraft}>Simpan Konsep</button>
+                  <button
+                    className="btn-secondary"
+                    onClick={saveDraft}
+                    disabled={!canDraftSptRole}
+                    title={!canDraftSptRole ? explainDeniedSpt('draft', spt.kind) : undefined}
+                  >
+                    Simpan Konsep
+                  </button>
                   <button
                     className="btn-primary"
                     onClick={() => setSigning(true)}
-                    disabled={!spt.declaration.agreed || !spt.declaration.signerName}
+                    disabled={!canSignSptRole || !spt.declaration.agreed || !spt.declaration.signerName}
+                    title={!canSignSptRole ? explainDeniedSpt('sign', spt.kind) : undefined}
                   >
                     Bayar dan Lapor
                   </button>
@@ -414,9 +445,11 @@ function DeclarationForm({
 function BillingCard({
   billing,
   onPay,
+  disabled,
 }: {
   billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string };
   onPay: () => void;
+  disabled?: boolean;
 }) {
   return (
     <div className="rounded-md border border-accent bg-[#FFF8E6] p-4">
@@ -430,7 +463,7 @@ function BillingCard({
       <p className="mt-1 text-xxs text-ink-muted">
         Berlaku sampai {new Date(billing.expiresAt).toLocaleString('id-ID')}
       </p>
-      <button className="btn-primary mt-3" onClick={onPay}>
+      <button className="btn-primary mt-3" onClick={onPay} disabled={disabled}>
         Simulasikan Pembayaran
       </button>
       <p className="mt-1 text-xxs text-ink-muted">

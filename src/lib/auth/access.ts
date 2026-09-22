@@ -1,5 +1,5 @@
 import { ROLES, type RoleCode } from '@/lib/domain/roles';
-import type { BupotDoc, RelatedParty, RoleAssignment, Session } from '@/lib/domain/types';
+import type { BupotDoc, RelatedParty, RoleAssignment, Session, SptDoc, SptKind } from '@/lib/domain/types';
 
 /**
  * Otorisasi Coretax bekerja pada dua sumbu sekaligus:
@@ -92,7 +92,12 @@ export function canSign(
   return hasRole(all, session, rolesForBupot(kind).signer);
 }
 
-/** Filter baris tabel sesuai kedua sumbu otorisasi di atas. */
+/**
+ * Filter baris tabel sesuai kedua sumbu otorisasi di atas. Memakai canDraft
+ * ATAU canSign (bukan cuma canDraft) supaya akun yang hanya diberi role
+ * Signer tetap bisa melihat dokumen yang perlu ditandatangani, bukan hanya
+ * dokumen yang ia buat sendiri.
+ */
 export function filterVisibleBupots(
   docs: BupotDoc[],
   all: RoleAssignment[],
@@ -103,10 +108,65 @@ export function filterVisibleBupots(
   const scope = visibleNitkus(all, session, parties);
   return docs.filter((d) => {
     if (d.entityTin !== session.impersonatingTin) return false;
-    if (!canDraft(all, session, d.kind, parties)) return false;
+    if (!canDraft(all, session, d.kind, parties) && !canSign(all, session, d.kind, parties)) return false;
     if (scope === null) return true;
     return scope.includes(d.idPlaceOfBusinessActivity);
   });
+}
+
+function rolesForSpt(kind: SptKind): { drafter: RoleCode; signer: RoleCode } {
+  return kind === 'PPH_21_26'
+    ? { drafter: ROLES.SPT_21_DRAFTER, signer: ROLES.SPT_21_SIGNER }
+    : { drafter: ROLES.SPT_UNIFIKASI_DRAFTER, signer: ROLES.SPT_UNIFIKASI_SIGNER };
+}
+
+/**
+ * SPT dilaporkan di tingkat Badan (SptDoc tidak punya field NITKU), berbeda
+ * dari bukti potong yang bisa dibuat per TKU. Karena itu otorisasi SPT hanya
+ * memakai sumbu pertama (jenis pajak) dan mensyaratkan pihak terkait PUSAT —
+ * PIC TKU cabang (scopeNitku terisi) tidak otomatis dapat mengelola SPT,
+ * persis seperti pelaporan SPT Masa yang dilakukan terpusat di Coretax asli.
+ */
+export function canDraftSpt(
+  all: RoleAssignment[],
+  session: Session,
+  kind: SptKind,
+  parties: RelatedParty[] = [],
+): boolean {
+  if (isEntityPic(parties, session)) return true;
+  if (!isPusat(all, session, parties)) return false;
+  return hasRole(all, session, rolesForSpt(kind).drafter);
+}
+
+export function canSignSpt(
+  all: RoleAssignment[],
+  session: Session,
+  kind: SptKind,
+  parties: RelatedParty[] = [],
+): boolean {
+  if (isEntityPic(parties, session)) return true;
+  if (!isPusat(all, session, parties)) return false;
+  return hasRole(all, session, rolesForSpt(kind).signer);
+}
+
+/** Filter daftar SPT: hanya badan yang sedang diwakili, dan hanya bila akun punya role drafter atau signer untuk jenis SPT tersebut. */
+export function filterVisibleSpts(
+  docs: SptDoc[],
+  all: RoleAssignment[],
+  session: Session,
+  parties: RelatedParty[] = [],
+): SptDoc[] {
+  if (!session.impersonatingTin) return [];
+  return docs.filter((d) => {
+    if (d.entityTin !== session.impersonatingTin) return false;
+    return canDraftSpt(all, session, d.kind, parties) || canSignSpt(all, session, d.kind, parties);
+  });
+}
+
+export function explainDeniedSpt(action: 'draft' | 'sign', kind: SptKind): string {
+  const { drafter, signer } = rolesForSpt(kind);
+  const needed = action === 'sign' ? signer : drafter;
+  return `Akun Anda belum memiliki role ${needed} sebagai pihak terkait pusat. Minta PIC Badan menambahkannya lewat Manajemen Akses → Wakil/Kuasa Saya → Tetapkan Role, atau lewat Informasi Umum → Pihak Terkait bila Anda ingin menjadi PIC.`;
 }
 
 /**

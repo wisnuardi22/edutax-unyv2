@@ -6,11 +6,14 @@ import { nextWithholdingNumber } from '@/lib/storage/db';
 import { PTKP_OPTIONS, withheldByTer } from '@/lib/domain/ter';
 import { tabOf, type DocTab } from '@/lib/domain/types';
 import { SignDialog } from '@/components/ui/SignDialog';
+import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
 
 /**
  * Bukti Pemotongan Bulanan Pegawai Tetap (EBUPOT MP).
  * Layar ini jadi acuan bentuk untuk seluruh modul eBupot lainnya:
  * tiga tab status, tombol buat, terbitkan dengan tanda tangan, dan batal.
+ * Sejak modul Role Akses disambungkan ke sini, daftar dan tombol aksi
+ * mengikuti canDraft()/canSign()/filterVisibleBupots() dari lib/auth/access.
  */
 
 const TABS: { key: DocTab; label: string }[] = [
@@ -31,10 +34,16 @@ export default function BpmpPage() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const entityTin = db.session?.impersonatingTin ?? null;
-  const rows = useMemo(
-    () => db.bupots.filter((b) => b.kind === 'BPMP' && b.entityTin === entityTin && tabOf(b.status) === tab),
-    [db.bupots, entityTin, tab],
-  );
+  const rows = useMemo(() => {
+    if (!db.session) return [];
+    const visible = filterVisibleBupots(
+      db.bupots.filter((b) => b.kind === 'BPMP'),
+      db.roleAssignments,
+      db.session,
+      db.relatedParties,
+    );
+    return visible.filter((b) => tabOf(b.status) === tab);
+  }, [db.bupots, db.roleAssignments, db.relatedParties, db.session, tab]);
 
   // Formulir
   const [month, setMonth] = useState(new Date().getMonth() + 1);
@@ -55,7 +64,19 @@ export default function BpmpPage() {
     );
   }
 
+  const canDraftBpmp = canDraft(db.roleAssignments, db.session!, 'BPMP', db.relatedParties);
+  const canSignBpmp = canSign(db.roleAssignments, db.session!, 'BPMP', db.relatedParties);
+
+  if (!canDraftBpmp && !canSignBpmp) {
+    return (
+      <p className="rounded-card bg-white p-5 text-sm shadow-card">
+        {explainDenied('draft', 'BPMP')}
+      </p>
+    );
+  }
+
   function saveDraft(submit: boolean) {
+    if (!canDraftBpmp) { setNotice(explainDenied('draft', 'BPMP')); return; }
     const cleanNik = nik.replace(/\D/g, '');
     const person = db.persons.find((p) => p.nik === cleanNik);
     // Meniru perilaku Coretax: NIK yang tidak dikenali diganti nilai sentinel.
@@ -95,7 +116,7 @@ export default function BpmpPage() {
   }
 
   function issue(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
-    if (!password) return;
+    if (!password || !canSignBpmp) return;
     mutate((d) => {
       for (const id of selected) {
         const doc = d.bupots.find((b) => b.id === id);
@@ -116,6 +137,7 @@ export default function BpmpPage() {
   }
 
   function cancel() {
+    if (!canSignBpmp) return;
     mutate((d) => {
       for (const id of selected) {
         const doc = d.bupots.find((b) => b.id === id);
@@ -130,6 +152,7 @@ export default function BpmpPage() {
   }
 
   function remove() {
+    if (!canDraftBpmp) return;
     mutate((d) => {
       d.bupots = d.bupots.filter((b) => !(selected.includes(b.id) && b.status !== 'ISSUED'));
     });
@@ -161,15 +184,41 @@ export default function BpmpPage() {
           <div className="ml-auto flex gap-2">
             {tab === 'BELUM_TERBIT' && (
               <>
-                <button className="btn-secondary" onClick={() => setFormOpen(true)}>+ Buat eBupot MP</button>
-                <button className="btn-secondary" onClick={remove} disabled={!selected.length}>Hapus</button>
-                <button className="btn-primary" onClick={() => setSigning(true)} disabled={!selected.length}>
+                <button
+                  className="btn-secondary"
+                  onClick={() => setFormOpen(true)}
+                  disabled={!canDraftBpmp}
+                  title={!canDraftBpmp ? explainDenied('draft', 'BPMP') : undefined}
+                >
+                  + Buat eBupot MP
+                </button>
+                <button
+                  className="btn-secondary"
+                  onClick={remove}
+                  disabled={!selected.length || !canDraftBpmp}
+                  title={!canDraftBpmp ? explainDenied('draft', 'BPMP') : undefined}
+                >
+                  Hapus
+                </button>
+                <button
+                  className="btn-primary"
+                  onClick={() => setSigning(true)}
+                  disabled={!selected.length || !canSignBpmp}
+                  title={!canSignBpmp ? explainDenied('sign', 'BPMP') : undefined}
+                >
                   Terbitkan
                 </button>
               </>
             )}
             {tab === 'TELAH_TERBIT' && (
-              <button className="btn-secondary" onClick={cancel} disabled={!selected.length}>Batal</button>
+              <button
+                className="btn-secondary"
+                onClick={cancel}
+                disabled={!selected.length || !canSignBpmp}
+                title={!canSignBpmp ? explainDenied('sign', 'BPMP') : undefined}
+              >
+                Batal
+              </button>
             )}
           </div>
         </div>

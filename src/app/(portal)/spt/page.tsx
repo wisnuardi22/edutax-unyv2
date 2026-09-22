@@ -4,11 +4,15 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
 import { emptyManualRows, type SptStatus } from '@/lib/domain/types';
+import { canDraftSpt, canSignSpt, explainDeniedSpt, filterVisibleSpts } from '@/lib/auth/access';
 
 /**
  * Daftar SPT Masa. Sidebar dan alur ini mengikuti slide 115-119 apa adanya:
  * lima status (Konsep, Menunggu Pembayaran, Dilaporkan, Ditolak, Dibatalkan)
- * dan wizard tiga langkah untuk membentuk konsep baru.
+ * dan wizard tiga langkah untuk membentuk konsep baru. Daftar dan tombol
+ * "Buat Konsep SPT" mengikuti role SPT_21_DRAFTER/SIGNER lewat lib/auth/access —
+ * berbeda dari bukti potong, SPT hanya untuk pihak terkait PUSAT (lihat catatan
+ * di canDraftSpt/canSignSpt).
  */
 
 const SIDEBAR: { key: SptStatus; label: string }[] = [
@@ -31,10 +35,11 @@ export default function SptListPage() {
   const [wizardOpen, setWizardOpen] = useState(false);
 
   const entityTin = db.session?.impersonatingTin ?? null;
-  const rows = useMemo(
-    () => db.spts.filter((s) => s.entityTin === entityTin && s.status === status),
-    [db.spts, entityTin, status],
-  );
+  const rows = useMemo(() => {
+    if (!db.session) return [];
+    return filterVisibleSpts(db.spts, db.roleAssignments, db.session, db.relatedParties)
+      .filter((s) => s.status === status);
+  }, [db.spts, db.roleAssignments, db.relatedParties, db.session, status]);
 
   if (!entityTin) {
     return (
@@ -44,7 +49,19 @@ export default function SptListPage() {
     );
   }
 
+  const canDraftSptRole = canDraftSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
+  const canSignSptRole = canSignSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
+
+  if (!canDraftSptRole && !canSignSptRole) {
+    return (
+      <p className="rounded-card bg-white p-5 text-sm shadow-card">
+        {explainDeniedSpt('draft', 'PPH_21_26')}
+      </p>
+    );
+  }
+
   function removeDraft(id: string) {
+    if (!canDraftSptRole) return;
     mutate((d) => {
       d.spts = d.spts.filter((s) => s.id !== id);
     });
@@ -71,7 +88,12 @@ export default function SptListPage() {
         <div className="flex items-center gap-2">
           <h1 className="font-semibold">{SIDEBAR.find((s) => s.key === status)!.label}</h1>
           {status === 'KONSEP' && (
-            <button className="btn-primary ml-auto" onClick={() => setWizardOpen(true)}>
+            <button
+              className="btn-primary ml-auto"
+              onClick={() => setWizardOpen(true)}
+              disabled={!canDraftSptRole}
+              title={!canDraftSptRole ? explainDeniedSpt('draft', 'PPH_21_26') : undefined}
+            >
               + Buat Konsep SPT
             </button>
           )}
@@ -109,7 +131,7 @@ export default function SptListPage() {
                     >
                       {status === 'KONSEP' ? 'Lihat' : 'Detail'}
                     </button>
-                    {status === 'KONSEP' && (
+                    {status === 'KONSEP' && canDraftSptRole && (
                       <button className="text-bad hover:underline" onClick={() => removeDraft(s.id)}>
                         Hapus
                       </button>
