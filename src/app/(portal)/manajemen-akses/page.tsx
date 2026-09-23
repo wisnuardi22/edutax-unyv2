@@ -6,6 +6,8 @@ import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent } from '@/lib/storage/db';
 import { ROLE_GROUPS, ROLE_LABELS } from '@/lib/domain/roles';
 import type { RoleCode } from '@/lib/domain/roles';
+import { ExportIconRow } from '@/components/ui/ExportIconRow';
+import { downloadCsv, downloadXls, printAsPdf } from '@/lib/storage/csv';
 
 /**
  * Manajemen Akses — Tahap 1 praktikum.
@@ -545,6 +547,7 @@ export function RoleSection({ entityTin }: { entityTin: string }) {
   const [selectedPerson, setSelectedPerson] = useState<string | null>(null);
   const tkus = db.tkus.filter((t) => t.entityTin === entityTin);
   const assignments = db.roleAssignments.filter((a) => a.entityTin === entityTin);
+  const myNik = db.session?.personNik ?? null;
 
   function revoke(id: string) {
     mutate((d) => {
@@ -560,6 +563,13 @@ export function RoleSection({ entityTin }: { entityTin: string }) {
     ...assignments.map((assignment) => ({ nik: assignment.personNik, name: db.persons.find((person) => person.nik === assignment.personNik)?.nama ?? assignment.personNik })),
   ].map((person) => [person.nik, person])).values()];
 
+  function refresh() { mutate(() => {}); }
+  const exportHeaders = ['NPWP/NIK', 'Nama', 'Jenis Perwakilan', 'Role'];
+  const exportRows = () => people.map((p) => {
+    const roles = assignments.filter((a) => a.personNik === p.nik).map((a) => a.role).join(', ');
+    return [p.nik, p.name, roles ? 'Wakil/Pegawai' : 'Belum ditetapkan', roles || '-'];
+  });
+
   return (
     <section className="rounded-card bg-white p-5 shadow-card">
       <div className="flex items-start justify-between gap-4">
@@ -570,11 +580,21 @@ export function RoleSection({ entityTin }: { entityTin: string }) {
         <button className="btn-primary shrink-0" onClick={() => setSelectedPerson(null)}>+ New Representative</button>
       </div>
 
-      <div className="mt-4 flex gap-2 border-b border-line pb-3">
-        <button className="rounded-md bg-brand-50 p-2 text-brand-800" title="Muat ulang">↻</button>
-        <button className="rounded-md bg-zinc-600 p-2 text-white" title="Ekspor">▣</button>
-        <button className="rounded-md bg-good p-2 text-white" title="Ekspor Excel">▤</button>
-        <button className="rounded-md bg-bad p-2 text-white" title="Ekspor PDF">▧</button>
+      {myNik && (
+        <p className="mt-3 rounded-md border border-accent/40 bg-[#FFF8E6] px-3 py-2 text-[13px] text-ink">
+          Aplikasi ini cuma punya satu login bersama sekelas. Role yang ditetapkan ke NIK selain
+          NIK Anda sendiri (<strong className="font-mono">{myNik}</strong>, ditandai <strong>(Anda)</strong> di
+          tabel bila terdaftar) tidak akan terasa aksesnya oleh siapa pun di kelas ini.
+        </p>
+      )}
+
+      <div className="mt-4">
+        <ExportIconRow
+          onRefresh={refresh}
+          onCsv={() => downloadCsv('perwakilan-saya.csv', exportHeaders, exportRows())}
+          onXls={() => downloadXls('perwakilan-saya.xls', exportHeaders, exportRows())}
+          onPdf={() => printAsPdf('Perwakilan Saya', exportHeaders, exportRows())}
+        />
       </div>
 
       <div className="mt-3 overflow-x-auto">
@@ -615,7 +635,12 @@ export function RoleSection({ entityTin }: { entityTin: string }) {
                   </div>
                 </td>
                 <td className="font-mono">{person.nik}</td>
-                <td>{person.name}</td>
+                <td>
+                  {person.name}
+                  {person.nik === myNik && (
+                    <span className="ml-1.5 rounded bg-brand-50 px-1.5 py-0.5 text-xxs font-medium text-brand-700">Anda</span>
+                  )}
+                </td>
                 <td>{personAssignments.length ? 'Wakil/Pegawai' : 'Belum ditetapkan'}</td>
                 <td className="font-mono text-xs">{personAssignments.length ? `DA${person.nik.slice(-8)}` : '—'}</td>
                 <td>—</td>

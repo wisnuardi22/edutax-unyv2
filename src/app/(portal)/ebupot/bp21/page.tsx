@@ -2,23 +2,31 @@
 
 import { useMemo, useState } from 'react';
 import { useDb } from '@/lib/storage/useDb';
-import { nextWithholdingNumber } from '@/lib/storage/db';
+import { nextWithholdingNumber, type Database } from '@/lib/storage/db';
 import {
   BP21_REFERENCE_DOCUMENT_TYPES, BP21_TAX_FACILITY_OPTIONS, BP21_TAX_OBJECTS,
   taxObjectByName, withheldByTaxObject,
 } from '@/lib/domain/bp21';
 import { PTKP_OPTIONS } from '@/lib/domain/ter';
-import { tabOf, type DocTab } from '@/lib/domain/types';
+import { tabOf, type BupotDoc, type DocTab } from '@/lib/domain/types';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
-import { ModuleSwitcher } from '@/components/layout/ModuleSwitcher';
+import { ImportMenuButton } from '@/components/ui/ImportMenuButton';
+import { ExportIconRow } from '@/components/ui/ExportIconRow';
+import {
+  csvRowsToRecords, downloadCsv, downloadCsvTemplate, downloadXls, parseCsv, pickCsvFile, printAsPdf,
+} from '@/lib/storage/csv';
+import { Pencil } from 'lucide-react';
 
 /**
- * Bukti Pemotongan PPh Pasal 21 Selain Pegawai Tetap (BP21), slide 90-100.
+ * Bukti Pemotongan PPh Pasal 21 Selain Pegawai Tetap (BP21), slide 82-93.
  * Alur, tiga tab, dan tombol aksi disalin persis dari EBUPOT MP
  * (`ebupot/bpmp/page.tsx`) — yang berbeda hanya isi formulir: General
  * Information, Income Tax (Tax Object Name meng-auto-isi Article/Code/
- * Status/Revenue Code), dan Reference Document [12]-[15].
+ * Status/Deemed Net Income/Rate/Revenue Code), dan Reference Document
+ * [12]-[15]. Edit draft, Impor Data (CSV, bukan XML DJP asli — lihat
+ * `lib/storage/csv.ts`), dan Export CSV/Excel/PDF menyusul kemudian untuk
+ * menutup gap dari slide 87-88/183.
  */
 
 const TABS: { key: DocTab; label: string }[] = [
@@ -30,10 +38,21 @@ const TABS: { key: DocTab; label: string }[] = [
 const TIN_TIDAK_PADAN = '9990000000999000';
 const rupiah = (n: number) => n.toLocaleString('id-ID');
 
+const IMPORT_HEADERS = [
+  'TaxPeriodMonth', 'TaxPeriodYear', 'CounterpartTin', 'CounterpartName',
+  'StatusTaxExemption', 'TaxFacility', 'TaxObjectName', 'Gross',
+  'ReferenceDocumentType', 'ReferenceDocumentNumber', 'ReferenceDocumentDate',
+];
+const IMPORT_EXAMPLE = [
+  9, 2024, '3217122601770007', 'Nama Penerima Penghasilan', 'K/3', 'Tanpa Fasilitas',
+  BP21_TAX_OBJECTS[0].name, 2_000_000, 'Bukti Pembayaran', '456', '2024-09-20',
+];
+
 export default function Bp21Page() {
   const { db, mutate } = useDb();
   const [tab, setTab] = useState<DocTab>('BELUM_TERBIT');
   const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
   const [signing, setSigning] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -70,6 +89,12 @@ export default function Bp21Page() {
 
   const taxObject = taxObjectByName(taxObjectName);
   const preview = withheldByTaxObject(taxObjectName, gross);
+  const cleanTin = tin.replace(/\D/g, '');
+  // Field [7] "ID Place of Business Activity of Income Recipient": NITKU milik
+  // penerima penghasilan sendiri. Data model belum punya registry NITKU per
+  // penerima, jadi dipakai konvensi Coretax untuk NITKU Induk (TIN + 000000),
+  // sama seperti satu-satunya opsi yang muncul pada contoh di slide.
+  const recipientNitku = cleanTin.length === 16 ? `${cleanTin}000000` : '';
 
   if (!entityTin) {
     return (
@@ -91,49 +116,93 @@ export default function Bp21Page() {
   }
 
   function resetForm() {
-    setTin(''); setNama(''); setGross(0);
-    setRefDocNumber(''); setRefDocDate('');
+    setEditingId(null);
+    setMonth(new Date().getMonth() + 1); setYear(new Date().getFullYear());
+    setTin(''); setNama('');
+    setPtkp('K/0'); setTaxFacility(BP21_TAX_FACILITY_OPTIONS[0]); setTaxObjectName(BP21_TAX_OBJECTS[0].name);
+    setGross(0);
+    setRefDocType(BP21_REFERENCE_DOCUMENT_TYPES[0]); setRefDocNumber(''); setRefDocDate('');
+  }
+
+  /** Icon pensil [edit] — isi ulang formulir dari draft yang dipilih (slide "Klik icon pensil"). */
+  function openEdit(doc: BupotDoc) {
+    if (!canDraftBp21) return;
+    setEditingId(doc.id);
+    setMonth(doc.taxPeriodMonth); setYear(doc.taxPeriodYear);
+    setTin(doc.counterpartTin === TIN_TIDAK_PADAN ? '' : doc.counterpartTin);
+    setNama(doc.counterpartName);
+    setPtkp(String(doc.fields.ptkp ?? 'K/0'));
+    setTaxFacility(String(doc.fields.taxFacility ?? BP21_TAX_FACILITY_OPTIONS[0]));
+    setTaxObjectName(String(doc.fields.taxObjectName ?? BP21_TAX_OBJECTS[0].name));
+    setGross(doc.gross);
+    setRefDocType(String(doc.fields.referenceDocumentType ?? BP21_REFERENCE_DOCUMENT_TYPES[0]));
+    setRefDocNumber(String(doc.fields.referenceDocumentNumber ?? ''));
+    setRefDocDate(String(doc.fields.referenceDocumentDate ?? ''));
+    setFormOpen(true);
+  }
+
+  function resolveCounterpart(rawTin: string, fallbackName: string) {
+    const clean = rawTin.replace(/\D/g, '');
+    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
+    // NIK/NPWP yang tidak padan diganti sentinel — sama seperti EBUPOT MP.
+    const resolvedTin = clean && (!person || person.padan) ? clean : TIN_TIDAK_PADAN;
+    return { resolvedTin, name: person?.nama ?? fallbackName };
   }
 
   function saveDraft(submit: boolean) {
     if (!canDraftBp21) { setNotice(explainDenied('draft', 'BP21')); return; }
-    const cleanTin = tin.replace(/\D/g, '');
-    const person = db.persons.find((p) => p.nik === cleanTin || p.npwp16 === cleanTin);
-    // NIK/NPWP yang tidak padan diganti sentinel — sama seperti EBUPOT MP.
-    const resolvedTin = cleanTin && (!person || person.padan) ? cleanTin : TIN_TIDAK_PADAN;
+    const { resolvedTin, name } = resolveCounterpart(tin, nama);
 
     mutate((d) => {
-      d.bupots.push({
-        id: crypto.randomUUID(),
-        kind: 'BP21',
-        entityTin: entityTin!,
-        status: submit ? 'SUBMITTED' : 'DRAFT',
-        withholdingNumber: null,
-        taxPeriodMonth: month,
-        taxPeriodYear: year,
-        counterpartTin: resolvedTin,
-        counterpartName: person?.nama ?? nama,
-        taxObjectCode: taxObject.taxObjectCode,
-        gross,
-        rate: preview.rate,
-        withheld: preview.withheld,
-        idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
-        createdByNik: d.session!.personNik,
-        createdAt: new Date().toISOString(),
-        signature: null,
-        cancelledAt: null,
-        fields: {
-          ptkp,
-          taxFacility,
-          taxObjectName,
-          incomeTaxStatus: taxObject.incomeTaxStatus,
-          deemedNetIncome: taxObject.deemedNetIncome,
-          revenueCode: taxObject.revenueCode,
-          referenceDocumentType: refDocType,
-          referenceDocumentNumber: refDocNumber,
-          referenceDocumentDate: refDocDate,
-        },
-      });
+      const fields = {
+        ptkp,
+        taxFacility,
+        taxObjectName,
+        incomeTaxStatus: taxObject.incomeTaxStatus,
+        deemedNetIncome: taxObject.deemedNetIncome,
+        revenueCode: taxObject.revenueCode,
+        counterpartNitku: recipientNitku || undefined,
+        referenceDocumentType: refDocType,
+        referenceDocumentNumber: refDocNumber,
+        referenceDocumentDate: refDocDate,
+      };
+      const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
+      if (existing) {
+        Object.assign(existing, {
+          status: submit ? 'SUBMITTED' : 'DRAFT',
+          taxPeriodMonth: month,
+          taxPeriodYear: year,
+          counterpartTin: resolvedTin,
+          counterpartName: name,
+          taxObjectCode: taxObject.taxObjectCode,
+          gross,
+          rate: preview.rate,
+          withheld: preview.withheld,
+          fields,
+        });
+      } else {
+        d.bupots.push({
+          id: crypto.randomUUID(),
+          kind: 'BP21',
+          entityTin: entityTin!,
+          status: submit ? 'SUBMITTED' : 'DRAFT',
+          withholdingNumber: null,
+          taxPeriodMonth: month,
+          taxPeriodYear: year,
+          counterpartTin: resolvedTin,
+          counterpartName: name,
+          taxObjectCode: taxObject.taxObjectCode,
+          gross,
+          rate: preview.rate,
+          withheld: preview.withheld,
+          idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
+          createdByNik: d.session!.personNik,
+          createdAt: new Date().toISOString(),
+          signature: null,
+          cancelledAt: null,
+          fields,
+        });
+      }
     });
 
     setNotice(
@@ -189,13 +258,116 @@ export default function Bp21Page() {
     setSelected([]);
   }
 
+  function refresh() {
+    mutate(() => {}); // muat ulang dari localStorage — sinkron dgn tab lain, tanpa mengubah data.
+  }
+
+  const exportHeaders = [
+    'Masa Pajak', 'Nomor Bupot', 'TIN/NIK', 'Nama', 'Objek Pajak',
+    'Bruto', 'Deemed Net Income (%)', 'Rate (%)', 'PPh Dipotong', 'Status', 'Status Tanda Tangan',
+  ];
+  const exportRows = () => rows.map((r) => [
+    `${String(r.taxPeriodMonth).padStart(2, '0')}/${r.taxPeriodYear}`,
+    r.withholdingNumber ?? '-',
+    r.counterpartTin,
+    r.counterpartName,
+    String(r.fields.taxObjectName ?? '-'),
+    r.gross,
+    String(r.fields.deemedNetIncome ?? '-'),
+    r.rate,
+    r.withheld,
+    r.status,
+    r.signature ? r.signature.provider : 'Belum ditandatangani',
+  ]);
+  const exportFileBase = () => `ebupot-bp21-${TABS.find((t) => t.key === tab)!.label.toLowerCase().replace(/\s+/g, '-')}`;
+
+  function exportCsv() {
+    downloadCsv(`${exportFileBase()}.csv`, exportHeaders, exportRows());
+  }
+  function exportXls() {
+    downloadXls(`${exportFileBase()}.xls`, exportHeaders, exportRows());
+  }
+  function exportPdf() {
+    printAsPdf(`EBUPOT BP21 — ${TABS.find((t) => t.key === tab)!.label}`, exportHeaders, exportRows());
+  }
+
+  function downloadTemplate() {
+    downloadCsvTemplate('template-impor-bp21.csv', IMPORT_HEADERS, IMPORT_EXAMPLE);
+  }
+
+  function uploadFile() {
+    if (!canDraftBp21) { setNotice(explainDenied('draft', 'BP21')); return; }
+    pickCsvFile((text) => {
+      const records = csvRowsToRecords(parseCsv(text));
+      if (records.length === 0) { setNotice('File CSV kosong atau formatnya tidak sesuai template.'); return; }
+
+      let created = 0;
+      const errors: string[] = [];
+      mutate((d: Database) => {
+        records.forEach((rec, i) => {
+          const rowLabel = `Baris ${i + 2}`;
+          const m = Number(rec.TaxPeriodMonth), y = Number(rec.TaxPeriodYear), g = Number(rec.Gross);
+          const obj = BP21_TAX_OBJECTS.find((o) => o.name === rec.TaxObjectName);
+          if (!m || m < 1 || m > 12) { errors.push(`${rowLabel}: TaxPeriodMonth tidak valid.`); return; }
+          if (!y) { errors.push(`${rowLabel}: TaxPeriodYear tidak valid.`); return; }
+          if (!rec.CounterpartTin) { errors.push(`${rowLabel}: CounterpartTin kosong.`); return; }
+          if (!obj) { errors.push(`${rowLabel}: TaxObjectName "${rec.TaxObjectName}" tidak dikenali — cocokkan persis dengan pilihan pada formulir.`); return; }
+          if (!g || g <= 0) { errors.push(`${rowLabel}: Gross tidak valid.`); return; }
+
+          const { resolvedTin, name } = resolveCounterpart(rec.CounterpartTin, rec.CounterpartName || '(tanpa nama)');
+          const { withheld } = withheldByTaxObject(obj.name, g);
+          const cleanRecTin = rec.CounterpartTin.replace(/\D/g, '');
+          d.bupots.push({
+            id: crypto.randomUUID(),
+            kind: 'BP21',
+            entityTin: entityTin!,
+            status: 'DRAFT',
+            withholdingNumber: null,
+            taxPeriodMonth: m,
+            taxPeriodYear: y,
+            counterpartTin: resolvedTin,
+            counterpartName: name,
+            taxObjectCode: obj.taxObjectCode,
+            gross: g,
+            rate: obj.rate,
+            withheld,
+            idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
+            createdByNik: d.session!.personNik,
+            createdAt: new Date().toISOString(),
+            signature: null,
+            cancelledAt: null,
+            fields: {
+              ptkp: rec.StatusTaxExemption || 'K/0',
+              taxFacility: rec.TaxFacility || BP21_TAX_FACILITY_OPTIONS[0],
+              taxObjectName: obj.name,
+              incomeTaxStatus: obj.incomeTaxStatus,
+              deemedNetIncome: obj.deemedNetIncome,
+              revenueCode: obj.revenueCode,
+              counterpartNitku: cleanRecTin.length === 16 ? `${cleanRecTin}000000` : undefined,
+              referenceDocumentType: rec.ReferenceDocumentType || BP21_REFERENCE_DOCUMENT_TYPES[0],
+              referenceDocumentNumber: rec.ReferenceDocumentNumber || '',
+              referenceDocumentDate: rec.ReferenceDocumentDate || '',
+            },
+          });
+          created++;
+        });
+      });
+
+      setTab('BELUM_TERBIT');
+      setNotice(
+        errors.length === 0
+          ? `${created} bukti pemotongan berhasil diimpor ke daftar Belum Terbit.`
+          : `${created} baris berhasil diimpor. ${errors.length} baris gagal: ${errors.slice(0, 5).join(' ')}${errors.length > 5 ? ' …' : ''}`,
+      );
+    });
+  }
+
   const viewDoc = viewing ? db.bupots.find((b) => b.id === viewing) : null;
 
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,20%)_minmax(0,1fr)]">
       <aside className="rounded-card bg-white p-3 shadow-card">
-        <ModuleSwitcher active="BP21" />
-        <p className="px-2 pb-2 pt-3 text-[13px] font-semibold text-brand-800">
+        <p className="px-2 pb-2 text-[13px] font-semibold text-brand-800">
           Bukti Pemotongan Selain Pegawai Tetap
         </p>
         {TABS.map((t) => (
@@ -241,6 +413,12 @@ export default function Bp21Page() {
                 >
                   Terbitkan
                 </button>
+                <ImportMenuButton
+                  disabled={!canDraftBp21}
+                  title={explainDenied('draft', 'BP21')}
+                  onDownloadTemplate={downloadTemplate}
+                  onUpload={uploadFile}
+                />
               </>
             )}
             {tab === 'TELAH_TERBIT' && (
@@ -262,7 +440,11 @@ export default function Bp21Page() {
           </p>
         )}
 
-        <div className="mt-3 overflow-x-auto">
+        <div className="mt-3">
+          <ExportIconRow onRefresh={refresh} onCsv={exportCsv} onXls={exportXls} onPdf={exportPdf} />
+        </div>
+
+        <div className="overflow-x-auto">
           <table className="data-table">
             <thead>
               <tr>
@@ -275,13 +457,15 @@ export default function Bp21Page() {
                 <th className="text-right">Bruto</th>
                 <th className="text-right">Tarif</th>
                 <th className="text-right">PPh Dipotong</th>
+                <th>Status</th>
+                <th>E-Sign Status</th>
                 <th />
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={10} className="py-8 text-center text-ink-muted">
+                  <td colSpan={12} className="py-8 text-center text-ink-muted">
                     Belum ada bukti pemotongan pada daftar ini.
                   </td>
                 </tr>
@@ -308,10 +492,23 @@ export default function Bp21Page() {
                   <td className="text-right">{rupiah(r.gross)}</td>
                   <td className="text-right">{r.rate}%</td>
                   <td className="text-right">{rupiah(r.withheld)}</td>
+                  <td className="text-xxs">{r.status}</td>
+                  <td className="text-xxs">{r.signature ? r.signature.provider : '—'}</td>
                   <td>
-                    <button className="text-brand-600 hover:underline" onClick={() => setViewing(r.id)}>
-                      Lihat
-                    </button>
+                    <div className="flex gap-2">
+                      {tab === 'BELUM_TERBIT' && r.status === 'DRAFT' && canDraftBp21 && (
+                        <button
+                          className="text-brand-600 hover:text-brand-800"
+                          title="Edit"
+                          onClick={() => openEdit(r)}
+                        >
+                          <Pencil size={15} />
+                        </button>
+                      )}
+                      <button className="text-brand-600 hover:underline" onClick={() => setViewing(r.id)}>
+                        Lihat
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -323,7 +520,7 @@ export default function Bp21Page() {
       {formOpen && (
         <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-brand-900/40 p-4">
           <div className="w-full max-w-3xl rounded-card bg-white p-5 shadow-card">
-            <h2 className="font-semibold">Formulir EBUPOT BP21</h2>
+            <h2 className="font-semibold">{editingId ? 'Edit' : 'Formulir'} EBUPOT BP21</h2>
 
             <p className="mt-3 text-[13px] font-semibold text-ink-muted">General Information</p>
             <div className="mt-2 grid gap-3 md:grid-cols-3">
@@ -340,6 +537,10 @@ export default function Bp21Page() {
                 <input id="y" type="number" className="field-input" value={year} onChange={(e) => setYear(+e.target.value)} />
               </div>
               <div>
+                <label className="field-label">Status</label>
+                <output className="field-input block bg-canvas">NORMAL</output>
+              </div>
+              <div>
                 <label className="field-label" htmlFor="tin">TIN (NPWP 16 digit / NIK)</label>
                 <input id="tin" className="field-input font-mono" maxLength={16} value={tin}
                   onChange={(e) => setTin(e.target.value)} />
@@ -349,7 +550,13 @@ export default function Bp21Page() {
                 <input id="nm" className="field-input" value={nama} onChange={(e) => setNama(e.target.value)} />
               </div>
               <div>
-                <label className="field-label">ID Place of Business Activity</label>
+                <label className="field-label">ID Place of Business Activity of Income Recipient</label>
+                <output className="field-input block bg-canvas font-mono text-xxs">
+                  {recipientNitku || 'Isi TIN 16 digit terlebih dahulu'}
+                </output>
+              </div>
+              <div>
+                <label className="field-label">ID Place of Business Activity (Pemotong)</label>
                 <output className="field-input block bg-canvas font-mono text-xxs">
                   {db.session?.activeNitku ?? `${entityTin}000000`}
                 </output>

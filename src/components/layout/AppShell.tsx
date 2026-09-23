@@ -7,16 +7,15 @@ import { LogOut, RotateCcw, RefreshCw, Bell, HelpCircle } from 'lucide-react';
 import { useDb } from '@/lib/storage/useDb';
 import { addAuditEvent, resetDb } from '@/lib/storage/db';
 import { PORTAL_NAV_MENU } from '@/lib/domain/portal';
+import { EBUPOT_MENU } from '@/lib/domain/ebupotMenu';
 import { IdentitySwitcher } from './IdentitySwitcher';
 import { NavDropdown } from './NavDropdown';
 
 /** Versi aplikasi EduTax sendiri — bukan nomor build Coretax DJP. */
 const APP_VERSION = '1.0.0-edutax';
 
-/** Susunan menu mengikuti bar navigasi Coretax pada panduan. */
+/** Susunan menu mengikuti bar navigasi Coretax pada panduan. eBupot punya dropdown sendiri (lihat EBUPOT_MENU). */
 const MENU = [
-  { label: 'e-Faktur', href: '/e-faktur' },
-  { label: 'eBupot', href: '/ebupot/bpmp' },
   { label: 'Surat Pemberitahuan (SPT)', href: '/spt' },
   { label: 'Pembayaran', href: '/pembayaran' },
   { label: 'Buku Besar', href: '/buku-besar' },
@@ -104,9 +103,48 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         alamat: addressInput.trim(),
         picNiks: [],
       });
+      // Default PIC mengikuti slide 24 ("Default PIC di Coretax pada awalnya
+      // merujuk pada data ... Identitas Penanggungjawab"): siapa pun yang
+      // mendaftarkan Taxpayer baru otomatis jadi PIC-nya, persis seperti saat
+      // registrasi NPWP asli — bukan mulai dari nol seperti Badan yang
+      // sengaja diseed kosong untuk praktikum Tahap 1.
+      if (d.session) {
+        d.relatedParties.push({
+          id: crypto.randomUUID(),
+          entityTin: cleanTin,
+          kind: 'RELATED_PERSON',
+          role: 'WAKIL',
+          personNik: d.session.personNik,
+          personName: d.session.personName,
+          nationality: 'Indonesia',
+          countryOfOrigin: 'Indonesia',
+          email: '',
+          phone: '',
+          passportNumber: '',
+          sharePercentage: '',
+          beneficialOwnerCriteria: '',
+          isPic: true,
+          isExternalData: false,
+          validFrom: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+          validTo: null,
+        });
+      }
     });
     return null;
   }
+
+  // "Taxpayers" hanya menampilkan Badan yang PIC/role-nya sudah ditetapkan ke
+  // NIK Anda sendiri, ATAU Badan yang PIC-nya belum ditetapkan sama sekali
+  // (supaya Badan seed praktikum Tahap 1 tetap bisa diakses untuk mengatur
+  // PIC pertama kalinya — persis kondisi "belum ada PIC" yang mustahil
+  // terjadi di Coretax asli karena PIC selalu otomatis terisi saat registrasi,
+  // tapi di sini disengaja kosong sebagai bahan latihan).
+  const visibleEntities = db.entities.filter((e) => {
+    const parties = db.relatedParties.filter((p) => p.entityTin === e.tin);
+    if (parties.length === 0) return true;
+    return parties.some((p) => p.personNik === session?.personNik)
+      || db.roleAssignments.some((a) => a.entityTin === e.tin && a.personNik === session?.personNik);
+  });
 
   if (!session) return null;
 
@@ -170,7 +208,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <IdentitySwitcher
               personNik={session.personNik}
               personName={session.personName}
-              entities={db.entities}
+              entities={visibleEntities}
               activeEntityTin={session.impersonatingTin}
               onSelectMain={selectMain}
               onSelectEntity={selectEntity}
@@ -191,7 +229,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <nav className="flex flex-wrap items-center gap-1 border-t border-white/10 bg-brand-900 px-3 py-1.5 text-[13px]">
-          <NavDropdown label="Portal Saya" items={PORTAL_NAV_MENU} />
+          <NavDropdown label="Portal Saya" href="/portal" items={PORTAL_NAV_MENU} />
+          <Link href="/e-faktur" className="rounded px-2.5 py-1.5 hover:bg-white/10">e-Faktur</Link>
+          <NavDropdown label="eBupot" href="/ebupot/bpmp" items={EBUPOT_MENU} />
           {MENU.map((m) => (
             <Link key={m.href} href={m.href} className="rounded px-2.5 py-1.5 hover:bg-white/10">
               {m.label}

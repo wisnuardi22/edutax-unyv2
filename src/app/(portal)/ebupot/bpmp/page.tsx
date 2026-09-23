@@ -7,7 +7,6 @@ import { PTKP_OPTIONS, withheldByTer } from '@/lib/domain/ter';
 import { tabOf, type DocTab } from '@/lib/domain/types';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
-import { ModuleSwitcher } from '@/components/layout/ModuleSwitcher';
 
 /**
  * Bukti Pemotongan Bulanan Pegawai Tetap (EBUPOT MP).
@@ -163,8 +162,7 @@ export default function BpmpPage() {
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,20%)_minmax(0,1fr)]">
       <aside className="rounded-card bg-white p-3 shadow-card">
-        <ModuleSwitcher active="BPMP" />
-        <p className="px-2 pb-2 pt-3 text-[13px] font-semibold text-brand-800">
+        <p className="px-2 pb-2 text-[13px] font-semibold text-brand-800">
           Bukti Pemotongan Bulanan Pegawai Tetap
         </p>
         {TABS.map((t) => (

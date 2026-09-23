@@ -16,16 +16,16 @@ export interface NavSubItem {
  * menu (Portal Saya, Surat Pemberitahuan (SPT), dst.) adalah tombol dengan
  * panah bawah yang membuka daftar sub-menu mengambang, bukan tautan langsung.
  */
-export function NavDropdown({ label, items }: { label: string; items: NavSubItem[] }) {
+export function NavDropdown({ label, href, items }: { label: string; href: string; items: NavSubItem[] }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="relative">
       <div className="flex items-center gap-0.5 rounded text-[13px] hover:bg-white/10">
         <Link
-          href="/portal"
+          href={href}
           onClick={() => setOpen(false)}
-          aria-label="Kembali ke Portal Saya"
+          aria-label={`Buka ${label}`}
           className="rounded px-2.5 py-1.5"
         >
           {label}

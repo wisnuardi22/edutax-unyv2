@@ -193,7 +193,7 @@ function InformationDashboard({
   function contentFor(key: string) {
     if (key === 'ikhtisar') return <TaxpayerOverview profile={entity ? profileForEntity(entity.tin, entity.name, entity.address) : profileForMainAccount(session.personNik, session.personName)} />;
     if (key === 'informasi-umum') return <InformasiUmumSection entity={entity} session={session} relatedParties={relatedParties} onEdit={() => toggleSection('pihak-terkait')} />;
-    if (key === 'pihak-terkait') return <PihakTerkaitSection key={entity?.tin ?? 'main'} entityTin={entity?.tin ?? null} />;
+    if (key === 'pihak-terkait') return <PihakTerkaitSection key={entity?.tin ?? 'main'} entityTin={entity?.tin ?? null} myNik={session.personNik} myName={session.personName} />;
     if (key === 'wakil-kuasa') return entity ? <RoleSection entityTin={entity.tin} /> : <WorkflowLink title="Wakil/Kuasa Saya" href="/manajemen-akses?tab=role" />;
     if (key === 'tku') return entity
       ? <TkuSection entityTin={entity.tin} />
@@ -545,8 +545,27 @@ function todayDMY() {
  * localStorage; ia hanya menjadi "draft" lokal sampai bagian Pernyataan
  * dicentang dan tombol Kirim ditekan — meniru pemisahan antara "Save" pada
  * dialog dan "Kirim" pada penutup formulir yang eksplisit ditunjukkan di slide.
+ *
+ * CATATAN PENTING (khusus simulasi ini, tidak ada di Coretax asli): EduTax
+ * cuma punya SATU login bersama sekelas (lihat `login/page.tsx`) — tidak ada
+ * cara untuk "masuk sebagai" NIK orang lain. Jadi PIC/role yang diberikan ke
+ * NIK selain NIK Main Account (`myNik` di bawah) TIDAK AKAN PERNAH bisa
+ * dirasakan aksesnya oleh siapa pun di kelas ini, karena `session.personNik`
+ * tidak pernah berubah. Kalau mahasiswa menambahkan Pihak Terkait dengan NIK
+ * contoh/fiktif lalu bingung kenapa eBupot masih terkunci walau "PIC sudah
+ * dipilih" — itu sebabnya. Makanya di bawah ini NIK Main Account ditampilkan
+ * jelas + tombol isi-otomatis pada dialog, supaya mahasiswa sadar harus
+ * pakai NIK itu untuk mencoba modul eBupot/SPT sendiri.
  */
-function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
+function PihakTerkaitSection({
+  entityTin,
+  myNik,
+  myName,
+}: {
+  entityTin: string | null;
+  myNik: string;
+  myName: string;
+}) {
   const { db, mutate } = useDb();
 
   if (!entityTin) {
@@ -654,6 +673,13 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
         . Hanya satu PIC yang diizinkan untuk mewakili setiap Badan.
       </p>
 
+      <p className="mt-2 rounded-md border border-accent/40 bg-[#FFF8E6] px-3 py-2 text-[13px] text-ink">
+        Aplikasi ini cuma punya satu login bersama sekelas — tidak ada cara masuk sebagai NIK orang
+        lain. Supaya Anda sendiri bisa mencoba eBupot/SPT setelah menetapkan PIC/role, pakai NIK
+        Anda sendiri: <strong className="font-mono">{myNik}</strong> ({myName}). PIC/role yang
+        diberikan ke NIK lain tidak akan terasa aksesnya oleh siapa pun di kelas ini.
+      </p>
+
       <div className="mt-3 overflow-x-auto">
         <table className="data-table">
           <thead>
@@ -756,6 +782,8 @@ function PihakTerkaitSection({ entityTin }: { entityTin: string | null }) {
           party={dialog.party}
           entityTin={entityTin}
           persons={db.persons}
+          myNik={myNik}
+          myName={myName}
           onCancel={() => setDialog(null)}
           onSave={(party) => {
             const err = upsert(party);
@@ -774,6 +802,8 @@ function RelatedPartyDialog({
   party,
   entityTin,
   persons,
+  myNik,
+  myName,
   onCancel,
   onSave,
 }: {
@@ -781,6 +811,8 @@ function RelatedPartyDialog({
   party: RelatedParty | null;
   entityTin: string;
   persons: { nik: string; nama: string; negara: string; email?: string; phone?: string }[];
+  myNik: string;
+  myName: string;
   onCancel: () => void;
   onSave: (party: RelatedParty) => string | null;
 }) {
@@ -808,13 +840,17 @@ function RelatedPartyDialog({
     // "secara otomatis Nama, Kewarganegaraan, dan Negara Asal ... terisi oleh
     // sistem". Email/telepon tidak ikut terisi karena `Person` belum
     // menyimpan kedua field itu; tetap diisi manual, ditandai jelas di sini.
-    const match = persons.find((p) => p.nik === value.replace(/\D/g, ''));
+    const cleanValue = value.replace(/\D/g, '');
+    const match = persons.find((p) => p.nik === cleanValue);
     if (match) {
       setName(match.nama);
       setNationality(match.negara || 'Indonesia');
       setEmail(match.email || '');
       setPhone(match.phone || '');
       setCountry(match.negara || 'Indonesia');
+    } else if (cleanValue === myNik) {
+      // Main Account belum tentu punya baris di `persons` — isi dari sesi login.
+      setName(myName);
     }
   }
 
@@ -888,13 +924,31 @@ function RelatedPartyDialog({
           </div>
           <div>
             <label className="field-label" htmlFor="nik">Person NIK/TIN</label>
-            <input
-              id="nik"
-              className="field-input font-mono disabled:bg-canvas"
-              disabled={readOnly || mode === 'edit'}
-              value={nik}
-              onChange={(e) => handleNikChange(e.target.value)}
-            />
+            <div className="flex gap-1">
+              <input
+                id="nik"
+                className="field-input font-mono disabled:bg-canvas"
+                disabled={readOnly || mode === 'edit'}
+                value={nik}
+                onChange={(e) => handleNikChange(e.target.value)}
+              />
+              {mode === 'add' && (
+                <button
+                  type="button"
+                  className="btn-secondary shrink-0 whitespace-nowrap px-2 text-xxs"
+                  title={`Isi dengan NIK Anda sendiri (${myNik}) supaya PIC/akses terasa untuk sesi Anda sekarang`}
+                  onClick={() => handleNikChange(myNik)}
+                >
+                  Ini saya
+                </button>
+              )}
+            </div>
+            {nik.replace(/\D/g, '') !== myNik && (
+              <p className="mt-1 text-xxs text-ink-muted">
+                NIK ini bukan NIK login Anda ({myNik}) — akses tidak akan aktif untuk sesi Anda
+                sendiri kecuali Anda memakai NIK sendiri (lihat tombol &quot;Ini saya&quot;).
+              </p>
+            )}
           </div>
           <div>
             <label className="field-label" htmlFor="name">Person Name</label>

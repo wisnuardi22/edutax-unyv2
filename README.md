@@ -312,32 +312,68 @@ adanya:
    halaman SPT.~~ **Selesai.** Lihat juga `canDraftSpt`/`canSignSpt`/
    `filterVisibleSpts` (khusus SPT — hanya pihak terkait pusat, karena SPT
    tidak punya field NITKU) di `src/lib/auth/access.ts`.
-2. ~~Salin bentuk formulir BPMP untuk BP21~~ **Selesai** — lihat
-   `ebupot/bp21/page.tsx` dan tabel Tax Object Name di `lib/domain/bp21.ts`
-   (tarifnya flat/disederhanakan untuk simulasi kelas, lihat catatan PENTING
-   di file tersebut). **BPA1, BPA2, BP26 masih perlu dibangun** — BPA2 dan
-   BPA1 formnya jauh lebih kompleks (rekap tahunan multi-komponen, carry-in
-   dari pemberi kerja sebelumnya), tidak bisa sekadar salin BPMP/BP21.
+2. ~~Salin bentuk formulir BPMP untuk BP21~~ **Selesai, dan sudah diverifikasi
+   penuh terhadap gambar slide 82-93 (bukan cuma teks)** — lihat
+   `ebupot/bp21/page.tsx` dan tabel Tax Object Name di `lib/domain/bp21.ts`.
+   Sudah termasuk: field Status ("NORMAL") di General Information, kolom
+   Status terpisah dari E-Sign Status di tabel, edit draft (pensil), Impor
+   Data (CSV + Download Template), Export CSV/Excel/PDF, dan Deemed Net
+   Income% pada kalkulasi PPh. Satu-satunya sisa gap: kode objek pajak selain
+   "Imbalan kepada Tenaga Ahli" masih perkiraan (lihat catatan PENTING di
+   `bp21.ts`), karena PDF panduan hanya memberi satu contoh eksplisit.
+   **BPA1, BPA2, BP26, BPPU, BPNR, BPSS, BPDGG, DOKLAIN masih placeholder**
+   ("segera hadir") — link-nya sudah ada di dropdown eBupot (item #5), tapi
+   isinya belum dibangun. BPA1/BPA2 formnya jauh lebih kompleks (rekap
+   tahunan multi-komponen, carry-in dari pemberi kerja sebelumnya), tidak
+   bisa sekadar salin BPMP/BP21.
 3. Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`. Saat
    ini `SignDialog` menerima kata sandi apa saja tanpa memeriksa apakah
    kredensial sudah pernah didaftarkan lewat Permohonan Kode Otorisasi/
    Sertifikat Digital.
-4. Filter dropdown "Taxpayers" pada `IdentitySwitcher` berdasarkan
-   `RoleAssignment` orang yang login — saat ini semua Badan terdaftar
-   ditampilkan tanpa memeriksa apakah orang tersebut benar-benar diberi role.
-5. `ModuleSwitcher` (`src/components/layout/ModuleSwitcher.tsx`) baru
-   stopgap ringan di sidebar eBupot untuk mencapai BPMP/BP21 — belum jadi
-   dropdown "Pilih Modul eBupot" yang sesungguhnya di AppShell.
+4. ~~Filter dropdown "Taxpayers" pada `IdentitySwitcher`~~ **Selesai** — lihat
+   `visibleEntities` di `AppShell.tsx`. Aturannya: tampil kalau NIK Anda
+   sudah punya PIC/role untuk Badan itu, ATAU Badan itu belum punya PIC sama
+   sekali (supaya Badan seed Tahap 1 yang sengaja kosong tetap bisa diakses
+   untuk menetapkan PIC pertama kalinya). Taxpayer baru yang didaftarkan
+   lewat "Daftarkan Taxpayer baru" otomatis dapat PIC default = pendaftarnya
+   sendiri, meniru slide 24 ("Default PIC ... merujuk pada Identitas
+   Penanggungjawab" saat registrasi NPWP asli).
+5. ~~`ModuleSwitcher` baru stopgap ringan~~ **Selesai, dan lebih baik dari
+   rencana awal** — `ModuleSwitcher` dihapus, diganti dropdown "Pilih Modul
+   eBupot" sungguhan di `AppShell` (lihat `NavDropdown` +
+   `lib/domain/ebupotMenu.ts`), persis menu asli Coretax. `NavDropdown` jadi
+   generik (terima prop `href`) supaya bisa dipakai untuk "Portal Saya" dan
+   "eBupot" sekaligus.
 6. Modul BPPU untuk Unifikasi beserta SPT Masa Unifikasi (Induk, Daftar-I,
    Daftar-II), memakai pola yang sama dengan SPT PPh 21/26.
 7. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
    saat ini kedua status hanya siap menampung data bila suatu saat diisi lewat
    simulasi penolakan DJP atau pembatalan oleh Wajib Pajak.
-8. Impor XML dan ekspor CSV/Excel/PDF mengikuti kolom template Coretax:
-   `TIN`, `TaxPeriodMonth`, `TaxPeriodYear`, `CounterpartOption`,
-   `CounterpartPassport`, `CounterpartTin`, `StatusTaxExemption`, `Position`,
-   `TaxCertificate`, `TaxObjectCode`, `Gross`, `Rate`,
-   `IDPlaceOfBusinessActivity`, `WithholdingDate`.
+8. ~~Impor XML dan ekspor CSV/Excel/PDF~~ **Selesai untuk BP21** (Impor CSV +
+   Download Template, ekspor CSV/Excel/PDF, icon pensil untuk edit draft,
+   kolom E-Sign Status) — lihat `lib/storage/csv.ts`,
+   `ui/ImportMenuButton.tsx`, `ui/ExportIconRow.tsx`. **BPMP belum dapat
+   perlakuan yang sama** — tinggal pasang tiga komponen/util yang sama ke
+   `ebupot/bpmp/page.tsx`, polanya sudah ada di `bp21/page.tsx`. Dipakai CSV,
+   bukan XML asli DJP (lihat catatan PENTING di `csv.ts`), dan Excel/PDF
+   lewat trik ekspor HTML/dialog cetak browser, bukan library `.xlsx`/PDF
+   sungguhan (belum ada di `package.json`).
+9. **Kejutan penting yang baru ditemukan** (dan sudah dicek ulang lewat
+   render gambar slide 15 & 24, bukan cuma teks): slide 15 justru
+   mengonfirmasi model EduTax sudah benar — "PIC/Wakil/Kuasa *login* sebagai
+   *representative* lalu memilih *role* WP Badan/Orang Pribadi mana yang
+   akan diwakili": satu login (RAKA) bisa mewakili banyak Badan asalkan
+   *NIK RAKA sendiri* diberi PIC/role di masing-masing Badan itu — persis
+   pola "Main Account" + "Taxpayers" pada `IdentitySwitcher`. Bedanya, EduTax
+   cuma punya *satu* login bersama sekelas (`login/page.tsx`) — tidak ada
+   cara login sebagai NIK lain. Jadi PIC/Role yang diberikan ke NIK selain
+   NIK Main Account TIDAK AKAN PERNAH terasa aksesnya oleh siapa pun di
+   kelas ini. Ini bukan bug (logic `isEntityPic`/`canDraft`/`canSign` sudah
+   benar), tapi gap UX yang bikin bingung — sudah ditambal dengan callout +
+   tombol "Ini saya" di dialog Pihak Terkait (`portal/page.tsx`) dan badge
+   "Anda" di tabel Perwakilan Saya (`manajemen-akses/page.tsx`). Kalau mau
+   benar-benar mendukung multi-siswa-satu-Badan, perlu login per-NIK, bukan
+   satu Main Account bersama.
 
 ## Yang harus dilengkapi sebelum dipakai di kelas
 
