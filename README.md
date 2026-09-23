@@ -349,15 +349,40 @@ adanya:
 7. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
    saat ini kedua status hanya siap menampung data bila suatu saat diisi lewat
    simulasi penolakan DJP atau pembatalan oleh Wajib Pajak.
-8. ~~Impor XML dan ekspor CSV/Excel/PDF~~ **Selesai untuk BP21** (Impor CSV +
-   Download Template, ekspor CSV/Excel/PDF, icon pensil untuk edit draft,
-   kolom E-Sign Status) — lihat `lib/storage/csv.ts`,
-   `ui/ImportMenuButton.tsx`, `ui/ExportIconRow.tsx`. **BPMP belum dapat
-   perlakuan yang sama** — tinggal pasang tiga komponen/util yang sama ke
-   `ebupot/bpmp/page.tsx`, polanya sudah ada di `bp21/page.tsx`. Dipakai CSV,
-   bukan XML asli DJP (lihat catatan PENTING di `csv.ts`), dan Excel/PDF
-   lewat trik ekspor HTML/dialog cetak browser, bukan library `.xlsx`/PDF
-   sungguhan (belum ada di `package.json`).
+8. ~~Impor XML dan ekspor CSV/Excel/PDF~~ **Selesai untuk BPMP dan BP21** —
+   dan setelah dicek ulang lewat 11 screenshot asli EBUPOT MP yang dikirim
+   user, ternyata "XML" itu asli SpreadsheetML (Excel 2003 XML Spreadsheet,
+   makanya file-nya langsung terbuka jadi tabel di Excel) — bukan CSV yang
+   di-ganti-nama. `lib/storage/csv.ts` sekarang punya `toSpreadsheetXml`/
+   `downloadXmlTemplate`/`parseSpreadsheetXml` (pakai DOMParser/
+   XMLSerializer bawaan browser, tanpa dependency tambahan) dan BPMP memakai
+   XML asli ini untuk Impor Data, kolom persis template resmi: `TIN`,
+   `TaxPeriodMonth`, `TaxPeriodYear`, `CounterpartOption`,
+   `CounterpartPassport`, `CounterpartTin`, `StatusTaxExemption`, `Position`,
+   `TaxCertificate`, `TaxObjectCode`, `Gross`, `Rate`,
+   `IDPlaceOfBusinessActivity`, `WithholdingDate`. BP21 masih pakai CSV
+   (dipertahankan apa adanya, cukup untuk simulasi kelas) — lihat catatan
+   PENTING di `csv.ts` soal beda keduanya. Export CSV/Excel/PDF di kedua
+   modul masih lewat trik ekspor HTML/dialog cetak browser, bukan library
+   `.xlsx`/PDF sungguhan (belum ada di `package.json`).
+8b. **BPMP (form acuan) dirombak total setelah dicek ulang terhadap 11
+   screenshot asli** yang dikirim user (bukan cuma slide PDF) — ternyata versi
+   sebelumnya kehilangan banyak field nyata: **Foreign Employee** (toggle
+   Ya/Tidak) + **Passport Number** (muncul kalau Ya), **Address**/**Country**
+   (auto dari data pegawai), **Tax Certificate** (dropdown: Tanpa Fasilitas/
+   PPh DTP/Fasilitas Lainnya — sebelumnya di-hardcode), **Tax Object Name**
+   (dropdown 3 pilihan, meng-auto-isi Tax Article/Tax Object Code — kode
+   berubah otomatis kalau Foreign Employee=Ya, cuma "Pegawai Tetap"
+   (21-100-01/21-100-32) yang terverifikasi dari screenshot, dua nama objek
+   lain masih perkiraan pola, lihat `lib/domain/bpmp.ts`), **ID Place of
+   Business Activity** (sebelumnya teks otomatis, sekarang dropdown TKU
+   sungguhan dari `db.tkus`), field **Status** ("NORMAL"), icon **edit**
+   (pensil) untuk draft, dan judul tab yang benar ("EBUPOT MP ISSUED"/
+   "EBUPOT MP INVALID" — bukan terjemahan Indonesia). Tabel daftar juga
+   disederhanakan jadi 4 kolom (Tax Period/Withholding Number/Status/ID
+   Place of Business Activity) persis screenshot, dengan detail lengkap
+   (NIK/Nama/Bruto/Rate/dst) dipindah ke dialog "Lihat" — bukan tabel lebar
+   seperti sebelumnya.
 9. **Kejutan penting yang baru ditemukan** (dan sudah dicek ulang lewat
    render gambar slide 15 & 24, bukan cuma teks): slide 15 justru
    mengonfirmasi model EduTax sudah benar — "PIC/Wakil/Kuasa *login* sebagai

@@ -123,10 +123,10 @@ export function printAsPdf(title: string, headers: string[], rows: (string | num
 }
 
 /** Buka file picker, baca file pertama yang dipilih sebagai teks. */
-export function pickCsvFile(onLoad: (text: string, fileName: string) => void) {
+export function pickCsvFile(onLoad: (text: string, fileName: string) => void, accept = '.csv,text/csv') {
   const input = document.createElement('input');
   input.type = 'file';
-  input.accept = '.csv,text/csv';
+  input.accept = accept;
   input.onchange = () => {
     const file = input.files?.[0];
     if (!file) return;
@@ -135,4 +135,49 @@ export function pickCsvFile(onLoad: (text: string, fileName: string) => void) {
     reader.readAsText(file);
   };
   input.click();
+}
+
+/**
+ * Impor Data pada Coretax asli memakai file "XML" yang sebenarnya adalah
+ * SpreadsheetML (Excel 2003 XML Spreadsheet) — makanya file itu langsung
+ * terbuka sebagai tabel biasa di Microsoft Excel (lihat screenshot: menu
+ * "Table Design" muncul). Ini format XML asli yang valid, bukan CSV yang
+ * di-ganti-nama; dibuat/dibaca dengan XMLSerializer/DOMParser bawaan
+ * browser, tanpa perlu library tambahan.
+ */
+export function toSpreadsheetXml(sheetName: string, headers: string[], rows: (string | number)[][]): string {
+  const esc = (v: string | number) => String(v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const cell = (v: string | number) => {
+    const type = typeof v === 'number' ? 'Number' : 'String';
+    return `<Cell><Data ss:Type="${type}">${esc(v)}</Data></Cell>`;
+  };
+  const row = (cells: (string | number)[]) => `<Row>${cells.map(cell).join('')}</Row>`;
+  return `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Worksheet ss:Name="${esc(sheetName)}">
+  <Table>
+   ${row(headers)}
+   ${rows.map(row).join('\n   ')}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+}
+
+export function downloadXmlTemplate(filename: string, sheetName: string, headers: string[], example: (string | number)[]) {
+  download(filename, toSpreadsheetXml(sheetName, headers, [example]), 'application/xml');
+}
+
+/** Baca kembali file SpreadsheetML (XML) hasil download template yang sudah diisi. */
+export function parseSpreadsheetXml(text: string): string[][] {
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if (doc.querySelector('parsererror')) return [];
+  const rows = Array.from(doc.getElementsByTagName('Row'));
+  return rows.map((r) =>
+    Array.from(r.getElementsByTagName('Cell')).map((c) => c.getElementsByTagName('Data')[0]?.textContent ?? ''),
+  );
 }
