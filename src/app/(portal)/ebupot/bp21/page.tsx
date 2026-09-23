@@ -14,7 +14,7 @@ import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/aut
 import { ImportMenuButton } from '@/components/ui/ImportMenuButton';
 import { ExportIconRow } from '@/components/ui/ExportIconRow';
 import {
-  csvRowsToRecords, downloadCsv, downloadCsvTemplate, downloadXls, parseCsv, pickCsvFile, printAsPdf,
+  csvRowsToRecords, downloadCsv, downloadXls, downloadXmlTemplate, parseSpreadsheetXml, pickCsvFile, printAsPdf,
 } from '@/lib/storage/csv';
 import { Pencil } from 'lucide-react';
 
@@ -24,9 +24,10 @@ import { Pencil } from 'lucide-react';
  * (`ebupot/bpmp/page.tsx`) — yang berbeda hanya isi formulir: General
  * Information, Income Tax (Tax Object Name meng-auto-isi Article/Code/
  * Status/Deemed Net Income/Rate/Revenue Code), dan Reference Document
- * [12]-[15]. Edit draft, Impor Data (CSV, bukan XML DJP asli — lihat
- * `lib/storage/csv.ts`), dan Export CSV/Excel/PDF menyusul kemudian untuk
- * menutup gap dari slide 87-88/183.
+ * [12]-[15]. Edit draft, Impor Data (XML asli/SpreadsheetML — sama seperti
+ * BPMP, lihat `lib/storage/csv.ts`), dan Export CSV/Excel/PDF sudah
+ * lengkap. ID Place of Business Activity (Pemotong) memakai dropdown TKU
+ * sungguhan dari `db.tkus`, sama seperti BPMP.
  */
 
 const TABS: { key: DocTab; label: string }[] = [
@@ -41,11 +42,11 @@ const rupiah = (n: number) => n.toLocaleString('id-ID');
 const IMPORT_HEADERS = [
   'TaxPeriodMonth', 'TaxPeriodYear', 'CounterpartTin', 'CounterpartName',
   'StatusTaxExemption', 'TaxFacility', 'TaxObjectName', 'Gross',
-  'ReferenceDocumentType', 'ReferenceDocumentNumber', 'ReferenceDocumentDate',
+  'ReferenceDocumentType', 'ReferenceDocumentNumber', 'ReferenceDocumentDate', 'IDPlaceOfBusinessActivity',
 ];
 const IMPORT_EXAMPLE = [
   9, 2024, '3217122601770007', 'Nama Penerima Penghasilan', 'K/3', 'Tanpa Fasilitas',
-  BP21_TAX_OBJECTS[0].name, 2_000_000, 'Bukti Pembayaran', '456', '2024-09-20',
+  BP21_TAX_OBJECTS[0].name, 2_000_000, 'Bukti Pembayaran', '456', '2024-09-20', '0012345678910000000000',
 ];
 
 export default function Bp21Page() {
@@ -59,6 +60,7 @@ export default function Bp21Page() {
   const [viewing, setViewing] = useState<string | null>(null);
 
   const entityTin = db.session?.impersonatingTin ?? null;
+  const tkus = useMemo(() => db.tkus.filter((t) => t.entityTin === entityTin), [db.tkus, entityTin]);
   const rows = useMemo(() => {
     if (!db.session) return [];
     const visible = filterVisibleBupots(
@@ -86,6 +88,7 @@ export default function Bp21Page() {
   const [refDocType, setRefDocType] = useState<string>(BP21_REFERENCE_DOCUMENT_TYPES[0]);
   const [refDocNumber, setRefDocNumber] = useState('');
   const [refDocDate, setRefDocDate] = useState('');
+  const [nitku, setNitku] = useState('');
 
   const taxObject = taxObjectByName(taxObjectName);
   const preview = withheldByTaxObject(taxObjectName, gross);
@@ -122,6 +125,12 @@ export default function Bp21Page() {
     setPtkp('K/0'); setTaxFacility(BP21_TAX_FACILITY_OPTIONS[0]); setTaxObjectName(BP21_TAX_OBJECTS[0].name);
     setGross(0);
     setRefDocType(BP21_REFERENCE_DOCUMENT_TYPES[0]); setRefDocNumber(''); setRefDocDate('');
+    setNitku(tkus[0]?.nitku ?? '');
+  }
+
+  function openCreate() {
+    resetForm();
+    setFormOpen(true);
   }
 
   /** Icon pensil [edit] — isi ulang formulir dari draft yang dipilih (slide "Klik icon pensil"). */
@@ -138,6 +147,7 @@ export default function Bp21Page() {
     setRefDocType(String(doc.fields.referenceDocumentType ?? BP21_REFERENCE_DOCUMENT_TYPES[0]));
     setRefDocNumber(String(doc.fields.referenceDocumentNumber ?? ''));
     setRefDocDate(String(doc.fields.referenceDocumentDate ?? ''));
+    setNitku(doc.idPlaceOfBusinessActivity);
     setFormOpen(true);
   }
 
@@ -152,6 +162,7 @@ export default function Bp21Page() {
   function saveDraft(submit: boolean) {
     if (!canDraftBp21) { setNotice(explainDenied('draft', 'BP21')); return; }
     const { resolvedTin, name } = resolveCounterpart(tin, nama);
+    const chosenNitku = nitku || tkus[0]?.nitku || `${entityTin}000000`;
 
     mutate((d) => {
       const fields = {
@@ -178,6 +189,7 @@ export default function Bp21Page() {
           gross,
           rate: preview.rate,
           withheld: preview.withheld,
+          idPlaceOfBusinessActivity: chosenNitku,
           fields,
         });
       } else {
@@ -195,7 +207,7 @@ export default function Bp21Page() {
           gross,
           rate: preview.rate,
           withheld: preview.withheld,
-          idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
+          idPlaceOfBusinessActivity: chosenNitku,
           createdByNik: d.session!.personNik,
           createdAt: new Date().toISOString(),
           signature: null,
@@ -292,14 +304,15 @@ export default function Bp21Page() {
   }
 
   function downloadTemplate() {
-    downloadCsvTemplate('template-impor-bp21.csv', IMPORT_HEADERS, IMPORT_EXAMPLE);
+    downloadXmlTemplate('template-impor-bp21.xml', 'Sheet1', IMPORT_HEADERS, IMPORT_EXAMPLE);
   }
 
   function uploadFile() {
     if (!canDraftBp21) { setNotice(explainDenied('draft', 'BP21')); return; }
     pickCsvFile((text) => {
-      const records = csvRowsToRecords(parseCsv(text));
-      if (records.length === 0) { setNotice('File CSV kosong atau formatnya tidak sesuai template.'); return; }
+      const raw = parseSpreadsheetXml(text);
+      const records = csvRowsToRecords(raw);
+      if (records.length === 0) { setNotice('File XML kosong atau formatnya tidak sesuai template.'); return; }
 
       let created = 0;
       const errors: string[] = [];
@@ -331,7 +344,7 @@ export default function Bp21Page() {
             gross: g,
             rate: obj.rate,
             withheld,
-            idPlaceOfBusinessActivity: db.session?.activeNitku ?? `${entityTin}000000`,
+            idPlaceOfBusinessActivity: rec.IDPlaceOfBusinessActivity || tkus[0]?.nitku || `${entityTin}000000`,
             createdByNik: d.session!.personNik,
             createdAt: new Date().toISOString(),
             signature: null,
@@ -359,7 +372,7 @@ export default function Bp21Page() {
           ? `${created} bukti pemotongan berhasil diimpor ke daftar Belum Terbit.`
           : `${created} baris berhasil diimpor. ${errors.length} baris gagal: ${errors.slice(0, 5).join(' ')}${errors.length > 5 ? ' …' : ''}`,
       );
-    });
+    }, '.xml,application/xml,text/xml');
   }
 
   const viewDoc = viewing ? db.bupots.find((b) => b.id === viewing) : null;
@@ -391,7 +404,7 @@ export default function Bp21Page() {
               <>
                 <button
                   className="btn-secondary"
-                  onClick={() => setFormOpen(true)}
+                  onClick={openCreate}
                   disabled={!canDraftBp21}
                   title={!canDraftBp21 ? explainDenied('draft', 'BP21') : undefined}
                 >
@@ -449,14 +462,8 @@ export default function Bp21Page() {
             <thead>
               <tr>
                 <th className="w-10" />
-                <th>Masa Pajak</th>
-                <th>Nomor Bupot</th>
-                <th>TIN/NIK</th>
-                <th>Nama</th>
-                <th>Objek Pajak</th>
-                <th className="text-right">Bruto</th>
-                <th className="text-right">Tarif</th>
-                <th className="text-right">PPh Dipotong</th>
+                <th>Tax Period</th>
+                <th>Withholding Number</th>
                 <th>Status</th>
                 <th>E-Sign Status</th>
                 <th />
@@ -465,7 +472,7 @@ export default function Bp21Page() {
             <tbody>
               {rows.length === 0 && (
                 <tr>
-                  <td colSpan={12} className="py-8 text-center text-ink-muted">
+                  <td colSpan={6} className="py-8 text-center text-ink-muted">
                     Belum ada bukti pemotongan pada daftar ini.
                   </td>
                 </tr>
@@ -484,14 +491,6 @@ export default function Bp21Page() {
                   </td>
                   <td>{String(r.taxPeriodMonth).padStart(2, '0')}/{r.taxPeriodYear}</td>
                   <td className="font-mono">{r.withholdingNumber ?? '—'}</td>
-                  <td className={`font-mono ${r.counterpartTin === TIN_TIDAK_PADAN ? 'text-bad' : ''}`}>
-                    {r.counterpartTin}
-                  </td>
-                  <td>{r.counterpartName}</td>
-                  <td className="text-xxs">{String(r.fields.taxObjectName ?? '—')}</td>
-                  <td className="text-right">{rupiah(r.gross)}</td>
-                  <td className="text-right">{r.rate}%</td>
-                  <td className="text-right">{rupiah(r.withheld)}</td>
                   <td className="text-xxs">{r.status}</td>
                   <td className="text-xxs">{r.signature ? r.signature.provider : '—'}</td>
                   <td>
@@ -556,10 +555,19 @@ export default function Bp21Page() {
                 </output>
               </div>
               <div>
-                <label className="field-label">ID Place of Business Activity (Pemotong)</label>
-                <output className="field-input block bg-canvas font-mono text-xxs">
-                  {db.session?.activeNitku ?? `${entityTin}000000`}
-                </output>
+                <label className="field-label" htmlFor="pemotong-nitku">ID Place of Business Activity (Pemotong)</label>
+                {tkus.length > 0 ? (
+                  <select id="pemotong-nitku" className="field-input font-mono text-xxs" value={nitku || tkus[0].nitku}
+                    onChange={(e) => setNitku(e.target.value)}>
+                    {tkus.map((t) => (
+                      <option key={t.nitku} value={t.nitku}>{t.nitku} - {t.nama}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <output className="field-input block bg-canvas text-xxs">
+                    Belum ada TKU terdaftar — tambahkan di Manajemen Akses
+                  </output>
+                )}
               </div>
             </div>
 
@@ -656,8 +664,9 @@ export default function Bp21Page() {
             <dl className="mt-3 grid grid-cols-2 gap-y-2 text-[13px]">
               <dt className="text-ink-muted">Nomor Bupot</dt><dd className="font-mono">{viewDoc.withholdingNumber ?? '—'}</dd>
               <dt className="text-ink-muted">Masa Pajak</dt><dd>{String(viewDoc.taxPeriodMonth).padStart(2, '0')}/{viewDoc.taxPeriodYear}</dd>
-              <dt className="text-ink-muted">TIN/NIK</dt><dd className="font-mono">{viewDoc.counterpartTin}</dd>
+              <dt className="text-ink-muted">TIN/NIK</dt><dd className={`font-mono ${viewDoc.counterpartTin === TIN_TIDAK_PADAN ? 'text-bad' : ''}`}>{viewDoc.counterpartTin}</dd>
               <dt className="text-ink-muted">Nama</dt><dd>{viewDoc.counterpartName}</dd>
+              <dt className="text-ink-muted">ID Place of Business Activity</dt><dd className="font-mono text-xxs">{viewDoc.idPlaceOfBusinessActivity}</dd>
               <dt className="text-ink-muted">Tax Object Name</dt><dd>{String(viewDoc.fields.taxObjectName ?? '—')}</dd>
               <dt className="text-ink-muted">Tax Object Code</dt><dd className="font-mono">{viewDoc.taxObjectCode}</dd>
               <dt className="text-ink-muted">Income Tax Status</dt><dd>{String(viewDoc.fields.incomeTaxStatus ?? '—')}</dd>

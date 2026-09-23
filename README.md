@@ -312,15 +312,21 @@ adanya:
    halaman SPT.~~ **Selesai.** Lihat juga `canDraftSpt`/`canSignSpt`/
    `filterVisibleSpts` (khusus SPT — hanya pihak terkait pusat, karena SPT
    tidak punya field NITKU) di `src/lib/auth/access.ts`.
-2. ~~Salin bentuk formulir BPMP untuk BP21~~ **Selesai, dan sudah diverifikasi
-   penuh terhadap gambar slide 82-93 (bukan cuma teks)** — lihat
-   `ebupot/bp21/page.tsx` dan tabel Tax Object Name di `lib/domain/bp21.ts`.
-   Sudah termasuk: field Status ("NORMAL") di General Information, kolom
-   Status terpisah dari E-Sign Status di tabel, edit draft (pensil), Impor
-   Data (CSV + Download Template), Export CSV/Excel/PDF, dan Deemed Net
-   Income% pada kalkulasi PPh. Satu-satunya sisa gap: kode objek pajak selain
-   "Imbalan kepada Tenaga Ahli" masih perkiraan (lihat catatan PENTING di
-   `bp21.ts`), karena PDF panduan hanya memberi satu contoh eksplisit.
+2. ~~Salin bentuk formulir BPMP untuk BP21~~ **Selesai, dan sudah disamakan
+   ulang setelah BPMP dirombak (item #8b)** — lihat `ebupot/bp21/page.tsx`
+   dan tabel Tax Object Name di `lib/domain/bp21.ts`. Tiga hal yang baru
+   ketahuan beda saat disandingkan ke BPMP versi terverifikasi, sudah
+   ditambal: (a) bug tombol "+ Create" yang tidak `resetForm()` dulu — bisa
+   "nyangkut" ke draft terakhir yang diedit; (b) "ID Place of Business
+   Activity (Pemotong)" sekarang dropdown TKU sungguhan dari `db.tkus`,
+   bukan teks otomatis dari `session.activeNitku`; (c) tabel daftar
+   disederhanakan jadi 4 kolom (Tax Period/Withholding Number/Status/
+   E-Sign Status) persis slide 83/92, detail lengkap dipindah ke dialog
+   "Lihat". Impor Data juga sudah dinaikkan ke XML asli (SpreadsheetML)
+   sama seperti BPMP — sebelumnya masih CSV. Satu-satunya sisa gap: kode
+   objek pajak selain "Imbalan kepada Tenaga Ahli" masih perkiraan (lihat
+   catatan PENTING di `bp21.ts`), karena PDF panduan hanya memberi satu
+   contoh eksplisit.
    **BPA1, BPA2, BP26, BPPU, BPNR, BPSS, BPDGG, DOKLAIN masih placeholder**
    ("segera hadir") — link-nya sudah ada di dropdown eBupot (item #5), tapi
    isinya belum dibangun. BPA1/BPA2 formnya jauh lebih kompleks (rekap
