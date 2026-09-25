@@ -586,10 +586,12 @@ function LampiranTahunan({
           ))}
         </tbody>
       </table>
-      <p className="mt-2 text-xxs text-ink-muted">
-        {sub} berisi data mengenai daftar bukti potong {sub === 'BPA1' ? '1721-A1' : '1721-A2'}. Modul pembuatan
-        {sub === 'BPA1' ? ' BPA1' : ' BPA2'} disiapkan pada tahap pengembangan berikutnya.
-      </p>
+      {sub === 'BPA1' && (
+        <p className="mt-2 text-xxs text-ink-muted">
+          BPA1 berisi data mengenai daftar bukti potong 1721-A1. Modul pembuatan BPA1 disiapkan pada
+          tahap pengembangan berikutnya.
+        </p>
+      )}
     </div>
   );
 }

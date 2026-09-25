@@ -6,7 +6,6 @@ import { nextWithholdingNumber, type Database } from '@/lib/storage/db';
 import { PTKP_OPTIONS, withheldByTer } from '@/lib/domain/ter';
 import { BPMP_TAX_CERTIFICATE_OPTIONS, BPMP_TAX_OBJECTS, taxObjectByName, taxObjectCodeFor } from '@/lib/domain/bpmp';
 import { tabOf, type BupotDoc, type DocTab } from '@/lib/domain/types';
-import { SignDialog } from '@/components/ui/SignDialog';
 import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
 import { ImportMenuButton } from '@/components/ui/ImportMenuButton';
 import { ExportIconRow } from '@/components/ui/ExportIconRow';
@@ -51,7 +50,6 @@ export default function BpmpPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [selected, setSelected] = useState<string[]>([]);
-  const [signing, setSigning] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [viewing, setViewing] = useState<string | null>(null);
 
@@ -88,7 +86,30 @@ export default function BpmpPage() {
   const taxObjectCode = taxObjectCodeFor(taxObjectName, foreignEmployee);
   const preview = withheldByTer(ptkp, gross);
   const cleanNik = nik.replace(/\D/g, '');
-  const matchedPerson = db.persons.find((p) => p.nik === cleanNik);
+  const matchedPerson = db.persons.find((p) => p.nik === cleanNik || p.npwp16 === cleanNik);
+  const nikNotFound = cleanNik.length === 16 && !matchedPerson;
+
+  /**
+   * TIN/NIK → cari di database pegawai → ditemukan? isi otomatis Nama,
+   * PTKP, Jabatan, dan status Foreign Employee. Tidak ditemukan (tapi
+   * sudah 16 digit)? JANGAN isi apa pun secara sembarangan — tampilkan
+   * "Data tidak ditemukan" (lihat nikNotFound) dan biarkan kolom lain
+   * kosong untuk diisi manual.
+   */
+  function handleNikChange(value: string) {
+    setNik(value);
+    const clean = value.replace(/\D/g, '');
+    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
+    if (person) {
+      setNama(person.nama);
+      setPtkp(person.ptkp ?? 'K/0');
+      setJabatan(person.jabatan ?? '');
+      setForeignEmployee(person.negara !== 'Indonesia');
+    } else if (clean.length === 16) {
+      setNama('');
+      setJabatan('');
+    }
+  }
 
   if (!entityTin) {
     return (
@@ -213,24 +234,25 @@ export default function BpmpPage() {
     resetForm();
   }
 
-  function issue(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
-    if (!password || !canSignBpmp) return;
+  /**
+   * BPMP TIDAK memakai Sign Document — beda dari BP21/BPA2. Ini terlihat
+   * jelas dari urutan screenshot asli: klik "Terbitkan" langsung menuju
+   * notifikasi "Data successfully issued" tanpa ada dialog tanda tangan di
+   * antaranya (dialog Sign Document hanya muncul pada alur BP21/BPA2).
+   */
+  function issue() {
+    if (!canSignBpmp) return;
     mutate((d) => {
       for (const id of selected) {
         const doc = d.bupots.find((b) => b.id === id);
         if (!doc || doc.status === 'ISSUED' || doc.status === 'CANCELLED') continue;
         doc.status = 'ISSUED';
         doc.withholdingNumber = nextWithholdingNumber(d, doc.entityTin, doc.taxPeriodYear);
-        doc.signature = {
-          provider,
-          signerNik: d.session!.personNik,
-          signedAt: new Date().toISOString(),
-        };
+        doc.signature = null;
       }
     });
-    setSigning(false);
     setSelected([]);
-    setNotice('Bukti pemotongan diterbitkan dan masuk ke draft SPT Masa PPh Pasal 21.');
+    setNotice('Data successfully issued! Bukti pemotongan masuk ke draft SPT Masa PPh Pasal 21.');
     setTab('TELAH_TERBIT');
   }
 
@@ -390,7 +412,7 @@ export default function BpmpPage() {
                 </button>
                 <button
                   className="btn-primary"
-                  onClick={() => setSigning(true)}
+                  onClick={issue}
                   disabled={!selected.length || !canSignBpmp}
                   title={!canSignBpmp ? explainDenied('sign', 'BPMP') : undefined}
                 >
@@ -516,7 +538,10 @@ export default function BpmpPage() {
               <div>
                 <label className="field-label" htmlFor="n">TIN (NPWP 16 digit / NIK)</label>
                 <input id="n" className="field-input font-mono" maxLength={16} value={nik}
-                  onChange={(e) => setNik(e.target.value)} />
+                  onChange={(e) => handleNikChange(e.target.value)} />
+                {nikNotFound && (
+                  <p className="mt-1 text-xxs text-bad">Data tidak ditemukan. Isi Nama secara manual di bawah.</p>
+                )}
               </div>
               {foreignEmployee && (
                 <div>
@@ -640,14 +665,6 @@ export default function BpmpPage() {
             </div>
           </div>
         </div>
-      )}
-
-      {signing && (
-        <SignDialog
-          signerNik={db.session!.personNik}
-          onCancel={() => setSigning(false)}
-          onConfirm={issue}
-        />
       )}
     </div>
   );

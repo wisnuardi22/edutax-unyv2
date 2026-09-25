@@ -57,6 +57,18 @@ export interface Person {
   npwp16?: string;
   /** false bila NIK tidak padan -> memicu sentinel 9990000000999000 */
   padan: boolean;
+  /** Data kepegawaian — dipakai untuk auto-fill BPMP/BP21/BPA2 saat TIN/NIK cocok. */
+  gender?: 'Pria' | 'Wanita';
+  jabatan?: string;
+  /** Status of Tax Exemption bawaan pegawai ini, mis. 'K/0', 'TK/1'. */
+  ptkp?: string;
+  statusPegawai?: 'Pegawai Tetap' | 'PNS' | 'P3K' | 'Pensiunan' | 'Bukan Pegawai';
+  /** NIP/NRP — dipakai khusus BPA2. */
+  nip?: string;
+  /** Golongan (Class/Rank) PNS, mis. 'IIIa' — dipakai khusus BPA2. */
+  golongan?: string;
+  /** NPWP Badan tempat pegawai ini bekerja, untuk konteks/validasi. */
+  employerTin?: string;
 }
 
 /** Penugasan role: satu orang, satu badan, opsional dibatasi satu TKU. */

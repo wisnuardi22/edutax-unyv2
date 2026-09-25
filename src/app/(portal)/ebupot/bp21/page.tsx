@@ -93,11 +93,26 @@ export default function Bp21Page() {
   const taxObject = taxObjectByName(taxObjectName);
   const preview = withheldByTaxObject(taxObjectName, gross);
   const cleanTin = tin.replace(/\D/g, '');
+  const matchedPerson = db.persons.find((p) => p.nik === cleanTin || p.npwp16 === cleanTin);
+  const tinNotFound = cleanTin.length === 16 && !matchedPerson;
   // Field [7] "ID Place of Business Activity of Income Recipient": NITKU milik
   // penerima penghasilan sendiri. Data model belum punya registry NITKU per
   // penerima, jadi dipakai konvensi Coretax untuk NITKU Induk (TIN + 000000),
   // sama seperti satu-satunya opsi yang muncul pada contoh di slide.
   const recipientNitku = cleanTin.length === 16 ? `${cleanTin}000000` : '';
+
+  /** TIN → cari di database → ditemukan? isi otomatis Nama & PTKP. Tidak ditemukan? Jangan isi apa-apa, tampilkan "Data tidak ditemukan". */
+  function handleTinChange(value: string) {
+    setTin(value);
+    const clean = value.replace(/\D/g, '');
+    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
+    if (person) {
+      setNama(person.nama);
+      setPtkp(person.ptkp ?? 'K/0');
+    } else if (clean.length === 16) {
+      setNama('');
+    }
+  }
 
   if (!entityTin) {
     return (
@@ -542,7 +557,10 @@ export default function Bp21Page() {
               <div>
                 <label className="field-label" htmlFor="tin">TIN (NPWP 16 digit / NIK)</label>
                 <input id="tin" className="field-input font-mono" maxLength={16} value={tin}
-                  onChange={(e) => setTin(e.target.value)} />
+                  onChange={(e) => handleTinChange(e.target.value)} />
+                {tinNotFound && (
+                  <p className="mt-1 text-xxs text-bad">Data tidak ditemukan. Isi Nama secara manual di bawah.</p>
+                )}
               </div>
               <div className="md:col-span-2">
                 <label className="field-label" htmlFor="nm">Nama (otomatis bila TIN valid)</label>

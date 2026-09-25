@@ -327,11 +327,30 @@ adanya:
    objek pajak selain "Imbalan kepada Tenaga Ahli" masih perkiraan (lihat
    catatan PENTING di `bp21.ts`), karena PDF panduan hanya memberi satu
    contoh eksplisit.
-   **BPA1, BPA2, BP26, BPPU, BPNR, BPSS, BPDGG, DOKLAIN masih placeholder**
+   **BPA2 sekarang juga sudah dibangun lengkap** (lihat `ebupot/bpa2/page.tsx`
+   dan `lib/domain/bpa2.ts`) — General Information (Working for a Second
+   Employer, Tax Period Start/End, NIP/NRP, Gender, Golongan), Gross Income
+   per komponen, dan kalkulasi PPh tahunan progresif Pasal 17 penuh (biaya
+   jabatan dibatasi Rp500rb/bulan, PTKP, tarif berjenjang 5-35%), sudah
+   diverifikasi cocok persis dengan contoh angka di slide (110jt → net 105jt
+   → PKP 46,5jt → PPh 2.325.000). Tombol "Dari BPMP" bisa auto-sum PPh yang
+   sudah dipotong bulanan dari `db.bupots` kind BPMP untuk periode yang sama.
+   BPA2 IKUT memakai Sign Document (beda dari BPMP, sama seperti BP21) —
+   terverifikasi dari urutan screenshot Terbitkan → Sign Document → "Data
+   successfully issued". `taxPeriodMonth/Year` di top-level BupotDoc dipakai
+   untuk masa AKHIR (bukan awal) supaya otomatis nyambung ke SPT masa yang
+   tepat di L-IB — masa awal disimpan di `fields.startMonth/startYear`.
+   Satu catatan jujur: PTKP `TK/0` di slide contoh menghasilkan Rp58.500.000,
+   padahal tabel PTKP resmi untuk TK/0 adalah Rp54.000.000 (Rp58.500.000 itu
+   nilai K/0) — kemungkinan salah ketik di slide aslinya sendiri. Kode ini
+   memakai tabel PTKP resmi yang benar, bukan angka di slide yang tidak
+   konsisten dengan anotasi teksnya sendiri (lihat catatan PENTING di
+   `bpa2.ts`).
+   **BPA1, BP26, BPPU, BPNR, BPSS, BPDGG, DOKLAIN masih placeholder**
    ("segera hadir") — link-nya sudah ada di dropdown eBupot (item #5), tapi
-   isinya belum dibangun. BPA1/BPA2 formnya jauh lebih kompleks (rekap
-   tahunan multi-komponen, carry-in dari pemberi kerja sebelumnya), tidak
-   bisa sekadar salin BPMP/BP21.
+   isinya belum dibangun. BPA1 kemungkinan bisa menyalin banyak dari BPA2
+   (sama-sama rekap tahunan), tapi field spesifiknya belum pernah terlihat
+   di PDF (guide melompat dari BP21 langsung ke BPA2 tanpa merinci BPA1).
 3. Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`. Saat
    ini `SignDialog` menerima kata sandi apa saja tanpa memeriksa apakah
    kredensial sudah pernah didaftarkan lewat Permohonan Kode Otorisasi/
@@ -389,7 +408,7 @@ adanya:
    Place of Business Activity) persis screenshot, dengan detail lengkap
    (NIK/Nama/Bruto/Rate/dst) dipindah ke dialog "Lihat" — bukan tabel lebar
    seperti sebelumnya.
-9. **Kejutan penting yang baru ditemukan** (dan sudah dicek ulang lewat
+9. **Kejutan penting soal PIC/login** (dan sudah dicek ulang lewat
    render gambar slide 15 & 24, bukan cuma teks): slide 15 justru
    mengonfirmasi model EduTax sudah benar — "PIC/Wakil/Kuasa *login* sebagai
    *representative* lalu memilih *role* WP Badan/Orang Pribadi mana yang
@@ -405,6 +424,21 @@ adanya:
    "Anda" di tabel Perwakilan Saya (`manajemen-akses/page.tsx`). Kalau mau
    benar-benar mendukung multi-siswa-satu-Badan, perlu login per-NIK, bukan
    satu Main Account bersama.
+10. **BPMP TIDAK memakai Sign Document** — koreksi penting setelah
+    membandingkan urutan 11 screenshot asli: klik "Terbitkan" pada BPMP
+    langsung menuju notifikasi "Data successfully issued" TANPA dialog tanda
+    tangan di antaranya (beda dari BP21/BPA2 yang memang memakai Sign
+    Document). Versi sebelumnya salah menambahkan `SignDialog` ke BPMP —
+    sudah dihapus dari `ebupot/bpmp/page.tsx`.
+11. **Database pegawai dummy diperluas dari 1 jadi 10 orang** (lihat
+    `PRACTICE_PERSON_SEEDS` di `lib/domain/portal.ts`), lengkap dengan
+    `gender`, `jabatan`, `ptkp`, `statusPegawai`, `nip`, `golongan` (field
+    baru di `Person`) — dipakai untuk auto-fill NIK di BPMP/BP21/BPA2, plus
+    satu pegawai WNA (untuk uji toggle Foreign Employee di BPMP) dan satu NIK
+    yang sengaja tidak padan (untuk uji sentinel `9990000000999000`). Ketiga
+    form eBupot sekarang menampilkan pesan "Data tidak ditemukan" yang
+    eksplisit saat NIK 16 digit tidak cocok dengan siapa pun di database,
+    bukan diam-diam membiarkan field lain kosong.
 
 ## Yang harus dilengkapi sebelum dipakai di kelas
 
