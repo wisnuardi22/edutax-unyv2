@@ -421,7 +421,10 @@ export default function Bpa2Page() {
                       checked={selected.includes(r.id)}
                       onChange={(e) => setSelected((s) => (e.target.checked ? [...s, r.id] : s.filter((x) => x !== r.id)))} />
                   </td>
-                  <td>{monthLabel(Number(r.fields.startMonth ?? r.taxPeriodMonth))}/{r.fields.startYear ?? r.taxPeriodYear}</td>
+                  <td>
+                  {monthLabel(Number(r.fields.startMonth ?? r.taxPeriodMonth))}/
+                  {String(r.fields.startYear ?? r.taxPeriodYear)}
+                </td>
                   <td>{monthLabel(r.taxPeriodMonth)}/{r.taxPeriodYear}</td>
                   <td className="font-mono">{r.withholdingNumber ?? '—'}</td>
                   <td className="text-xxs">{r.status}</td>
@@ -658,7 +661,10 @@ export default function Bpa2Page() {
             <dl className="mt-3 grid grid-cols-2 gap-y-2 text-[13px]">
               <dt className="text-ink-muted">Nomor Bupot</dt><dd className="font-mono">{viewDoc.withholdingNumber ?? '—'}</dd>
               <dt className="text-ink-muted">Masa Pajak</dt>
-              <dd>{monthLabel(Number(viewDoc.fields.startMonth ?? viewDoc.taxPeriodMonth))}/{viewDoc.fields.startYear ?? viewDoc.taxPeriodYear} — {monthLabel(viewDoc.taxPeriodMonth)}/{viewDoc.taxPeriodYear}</dd>
+              <dd>
+                {monthLabel(Number(viewDoc.fields.startMonth ?? viewDoc.taxPeriodMonth))}/
+                {String(viewDoc.fields.startYear ?? viewDoc.taxPeriodYear)} — {monthLabel(viewDoc.taxPeriodMonth)}/{viewDoc.taxPeriodYear}
+              </dd>
               <dt className="text-ink-muted">TIN/NIK</dt><dd className={`font-mono ${viewDoc.counterpartTin === NIK_TIDAK_PADAN ? 'text-bad' : ''}`}>{viewDoc.counterpartTin}</dd>
               <dt className="text-ink-muted">Nama</dt><dd>{viewDoc.counterpartName}</dd>
               <dt className="text-ink-muted">Total Bruto</dt><dd>{rupiah(viewDoc.gross)}</dd>
