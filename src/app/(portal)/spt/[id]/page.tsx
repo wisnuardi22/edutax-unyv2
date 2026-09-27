@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { buildArticleSummary, totalNetPayable, type ArticleSummaryRow } from '@/lib/domain/sptCalc';
-import type { SptManualRows } from '@/lib/domain/types';
+import type { CertificateProvider, SptManualRows } from '@/lib/domain/types';
 import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
 
 /**
@@ -89,7 +89,7 @@ export default function SptEditorPage() {
     setNotice('Konsep SPT tersimpan.');
   }
 
-  function submit(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
+  function submit(password: string, provider: CertificateProvider) {
     if (!password || !canSignSptRole) return;
     mutate((d) => {
       const s = d.spts.find((x) => x.id === id);
@@ -304,6 +304,7 @@ export default function SptEditorPage() {
       {signing && (
         <SignDialog
           signerNik={db.session!.personNik}
+          credential={db.mainAccountProfile?.signingCredential ?? null}
           onCancel={() => setSigning(false)}
           onConfirm={submit}
         />

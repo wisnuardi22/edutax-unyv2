@@ -8,13 +8,13 @@ import {
   taxObjectByName, withheldByTaxObject,
 } from '@/lib/domain/bp21';
 import { PTKP_OPTIONS } from '@/lib/domain/ter';
-import { tabOf, type BupotDoc, type DocTab } from '@/lib/domain/types';
+import { tabOf, type BupotDoc, type CertificateProvider, type DocTab } from '@/lib/domain/types';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
 import { ImportMenuButton } from '@/components/ui/ImportMenuButton';
 import { ExportIconRow } from '@/components/ui/ExportIconRow';
 import {
-  csvRowsToRecords, downloadCsv, downloadXls, downloadXmlTemplate, parseSpreadsheetXml, pickCsvFile, printAsPdf,
+  csvRowsToRecords, downloadCsv, downloadExcelTemplate, downloadXls, parseSpreadsheetXml, pickCsvFile, printAsPdf,
 } from '@/lib/storage/csv';
 import { Pencil } from 'lucide-react';
 
@@ -241,7 +241,7 @@ export default function Bp21Page() {
     resetForm();
   }
 
-  function issue(password: string, provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK') {
+  function issue(password: string, provider: CertificateProvider) {
     if (!password || !canSignBp21) return;
     mutate((d) => {
       for (const id of selected) {
@@ -319,7 +319,7 @@ export default function Bp21Page() {
   }
 
   function downloadTemplate() {
-    downloadXmlTemplate('template-impor-bp21.xml', 'Sheet1', IMPORT_HEADERS, IMPORT_EXAMPLE);
+    downloadExcelTemplate('template-impor-bp21.xls', 'Sheet1', IMPORT_HEADERS, IMPORT_EXAMPLE);
   }
 
   function uploadFile() {
@@ -327,7 +327,7 @@ export default function Bp21Page() {
     pickCsvFile((text) => {
       const raw = parseSpreadsheetXml(text);
       const records = csvRowsToRecords(raw);
-      if (records.length === 0) { setNotice('File XML kosong atau formatnya tidak sesuai template.'); return; }
+      if (records.length === 0) { setNotice('File kosong atau formatnya tidak sesuai template. Jika Anda mengedit dan menyimpan ulang di Excel, pastikan tetap disimpan sebagai "Web Page/XML Spreadsheet 2003 (.xls)", bukan dikonversi ke .xlsx.'); return; }
 
       let created = 0;
       const errors: string[] = [];
@@ -387,7 +387,7 @@ export default function Bp21Page() {
           ? `${created} bukti pemotongan berhasil diimpor ke daftar Belum Terbit.`
           : `${created} baris berhasil diimpor. ${errors.length} baris gagal: ${errors.slice(0, 5).join(' ')}${errors.length > 5 ? ' …' : ''}`,
       );
-    }, '.xml,application/xml,text/xml');
+    }, '.xls,.xml,application/vnd.ms-excel,application/xml,text/xml');
   }
 
   const viewDoc = viewing ? db.bupots.find((b) => b.id === viewing) : null;
@@ -706,6 +706,7 @@ export default function Bp21Page() {
       {signing && (
         <SignDialog
           signerNik={db.session!.personNik}
+          credential={db.mainAccountProfile?.signingCredential ?? null}
           onCancel={() => setSigning(false)}
           onConfirm={issue}
         />

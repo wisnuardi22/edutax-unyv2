@@ -351,10 +351,17 @@ adanya:
    isinya belum dibangun. BPA1 kemungkinan bisa menyalin banyak dari BPA2
    (sama-sama rekap tahunan), tapi field spesifiknya belum pernah terlihat
    di PDF (guide melompat dari BP21 langsung ke BPA2 tanpa merinci BPA1).
-3. Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`. Saat
-   ini `SignDialog` menerima kata sandi apa saja tanpa memeriksa apakah
-   kredensial sudah pernah didaftarkan lewat Permohonan Kode Otorisasi/
-   Sertifikat Digital.
+3. ~~Hubungkan `db.mainAccountProfile.signingCredential` ke `SignDialog`~~
+   **Selesai** — `SignDialog` sekarang menolak menandatangani bila belum ada
+   kredensial (arahkan ke Portal Saya → Sertifikat Digital), mengunci
+   dropdown provider ke provider yang benar-benar terdaftar (bukan pilihan
+   bebas), dan memvalidasi kata sandi terhadap `credential.passphrase` untuk
+   Kode Otorisasi DJP (salah = ditolak). `SignatureLog.provider` diperluas
+   dari 2 pilihan generik jadi `CertificateProvider` penuh (BRIN/BSSN/
+   PERURI/PrivyID/Kode Otorisasi DJP) supaya cocok dengan kredensial asli.
+   Untuk PSrE (BRIN/BSSN/PERURI/PrivyID), model data belum menyimpan PIN
+   tersendiri — kata sandi apa pun yang tidak kosong masih diterima
+   (keterbatasan yang didokumentasikan di komentar `SignDialog.tsx`).
 4. ~~Filter dropdown "Taxpayers" pada `IdentitySwitcher`~~ **Selesai** — lihat
    `visibleEntities` di `AppShell.tsx`. Aturannya: tampil kalau NIK Anda
    sudah punya PIC/role untuk Badan itu, ATAU Badan itu belum punya PIC sama
@@ -374,22 +381,23 @@ adanya:
 7. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
    saat ini kedua status hanya siap menampung data bila suatu saat diisi lewat
    simulasi penolakan DJP atau pembatalan oleh Wajib Pajak.
-8. ~~Impor XML dan ekspor CSV/Excel/PDF~~ **Selesai untuk BPMP dan BP21** —
-   dan setelah dicek ulang lewat 11 screenshot asli EBUPOT MP yang dikirim
-   user, ternyata "XML" itu asli SpreadsheetML (Excel 2003 XML Spreadsheet,
-   makanya file-nya langsung terbuka jadi tabel di Excel) — bukan CSV yang
-   di-ganti-nama. `lib/storage/csv.ts` sekarang punya `toSpreadsheetXml`/
-   `downloadXmlTemplate`/`parseSpreadsheetXml` (pakai DOMParser/
-   XMLSerializer bawaan browser, tanpa dependency tambahan) dan BPMP memakai
-   XML asli ini untuk Impor Data, kolom persis template resmi: `TIN`,
+8. ~~Impor XML dan ekspor CSV/Excel/PDF~~ **Selesai untuk BPMP dan BP21**,
+   dan sudah diperbaiki sekali lagi setelah user melaporkan template
+   download-nya tidak kebuka sebagai Excel — ternyata "XML" Coretax itu asli
+   SpreadsheetML (Excel 2003 XML Spreadsheet), tapi file yang saya download
+   sebelumnya berekstensi `.xml`, yang tidak selalu otomatis kebuka di Excel
+   tergantung asosiasi file di komputer siswa. Sekarang `downloadExcelTemplate()`
+   di `lib/storage/csv.ts` menyimpan konten SpreadsheetML yang sama dengan
+   ekstensi `.xls` (dan MIME `application/vnd.ms-excel`), supaya file
+   benar-benar terbuka sebagai Excel saat diklik dua kali — baik BPMP maupun
+   BP21 memakai fungsi ini, kolom template BPMP persis kolom resmi: `TIN`,
    `TaxPeriodMonth`, `TaxPeriodYear`, `CounterpartOption`,
    `CounterpartPassport`, `CounterpartTin`, `StatusTaxExemption`, `Position`,
    `TaxCertificate`, `TaxObjectCode`, `Gross`, `Rate`,
-   `IDPlaceOfBusinessActivity`, `WithholdingDate`. BP21 masih pakai CSV
-   (dipertahankan apa adanya, cukup untuk simulasi kelas) — lihat catatan
-   PENTING di `csv.ts` soal beda keduanya. Export CSV/Excel/PDF di kedua
-   modul masih lewat trik ekspor HTML/dialog cetak browser, bukan library
-   `.xlsx`/PDF sungguhan (belum ada di `package.json`).
+   `IDPlaceOfBusinessActivity`, `WithholdingDate`. Impor (upload) menerima
+   `.xls` maupun `.xml`. Export CSV/Excel/PDF di kedua modul masih lewat
+   trik ekspor HTML/dialog cetak browser, bukan library `.xlsx`/PDF
+   sungguhan (belum ada di `package.json`).
 8b. **BPMP (form acuan) dirombak total setelah dicek ulang terhadap 11
    screenshot asli** yang dikirim user (bukan cuma slide PDF) — ternyata versi
    sebelumnya kehilangan banyak field nyata: **Foreign Employee** (toggle

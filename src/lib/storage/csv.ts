@@ -143,7 +143,9 @@ export function pickCsvFile(onLoad: (text: string, fileName: string) => void, ac
  * terbuka sebagai tabel biasa di Microsoft Excel (lihat screenshot: menu
  * "Table Design" muncul). Ini format XML asli yang valid, bukan CSV yang
  * di-ganti-nama; dibuat/dibaca dengan XMLSerializer/DOMParser bawaan
- * browser, tanpa perlu library tambahan.
+ * browser, tanpa perlu library tambahan. File diberi ekstensi `.xls` (lihat
+ * `downloadExcelTemplate`) supaya benar-benar terbuka sebagai Excel saat
+ * diunduh, bukan `.xml` polos.
  */
 export function toSpreadsheetXml(sheetName: string, headers: string[], rows: (string | number)[][]): string {
   const esc = (v: string | number) => String(v)
@@ -168,8 +170,14 @@ export function toSpreadsheetXml(sheetName: string, headers: string[], rows: (st
 </Workbook>`;
 }
 
-export function downloadXmlTemplate(filename: string, sheetName: string, headers: string[], example: (string | number)[]) {
-  download(filename, toSpreadsheetXml(sheetName, headers, [example]), 'application/xml');
+export function downloadExcelTemplate(filename: string, sheetName: string, headers: string[], example: (string | number)[]) {
+  // .xls (bukan .xml) supaya file benar-benar terbuka sebagai Excel saat
+  // diklik dua kali — kontennya tetap SpreadsheetML (XML) yang sama, cuma
+  // ekstensi dan MIME type-nya yang disesuaikan agar OS/Excel langsung
+  // mengenalinya sebagai spreadsheet, persis seperti screenshot "Table1"
+  // yang ditunjukkan user (bukan file .xml polos yang belum tentu
+  // otomatis kebuka di Excel tergantung asosiasi file di komputer siswa).
+  download(filename, toSpreadsheetXml(sheetName, headers, [example]), 'application/vnd.ms-excel');
 }
 
 /** Baca kembali file SpreadsheetML (XML) hasil download template yang sudah diisi. */

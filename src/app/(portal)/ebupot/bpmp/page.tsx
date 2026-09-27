@@ -10,7 +10,7 @@ import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/aut
 import { ImportMenuButton } from '@/components/ui/ImportMenuButton';
 import { ExportIconRow } from '@/components/ui/ExportIconRow';
 import {
-  csvRowsToRecords, downloadCsv, downloadXls, downloadXmlTemplate, parseSpreadsheetXml, pickCsvFile, printAsPdf,
+  csvRowsToRecords, downloadCsv, downloadExcelTemplate, downloadXls, parseSpreadsheetXml, pickCsvFile, printAsPdf,
 } from '@/lib/storage/csv';
 import { Pencil } from 'lucide-react';
 
@@ -300,7 +300,7 @@ export default function BpmpPage() {
   function exportPdf() { printAsPdf(`EBUPOT MP — ${TABS.find((t) => t.key === tab)!.label}`, exportHeaders, exportRows()); }
 
   function downloadTemplate() {
-    downloadXmlTemplate('template-impor-ebupot-mp.xml', 'Sheet1', IMPORT_HEADERS, IMPORT_EXAMPLE);
+    downloadExcelTemplate('template-impor-ebupot-mp.xls', 'Sheet1', IMPORT_HEADERS, IMPORT_EXAMPLE);
   }
 
   function uploadFile() {
@@ -308,7 +308,7 @@ export default function BpmpPage() {
     pickCsvFile((text) => {
       const raw = parseSpreadsheetXml(text);
       const records = csvRowsToRecords(raw.length ? raw : []);
-      if (records.length === 0) { setNotice('File XML kosong atau formatnya tidak sesuai template.'); return; }
+      if (records.length === 0) { setNotice('File kosong atau formatnya tidak sesuai template. Jika Anda mengedit dan menyimpan ulang di Excel, pastikan tetap disimpan sebagai "Web Page/XML Spreadsheet 2003 (.xls)", bukan dikonversi ke .xlsx.'); return; }
 
       let created = 0;
       const errors: string[] = [];
@@ -362,7 +362,7 @@ export default function BpmpPage() {
           ? `${created} bukti pemotongan berhasil diimpor ke daftar Belum Terbit.`
           : `${created} baris berhasil diimpor. ${errors.length} baris gagal: ${errors.slice(0, 5).join(' ')}${errors.length > 5 ? ' …' : ''}`,
       );
-    }, '.xml,application/xml,text/xml');
+    }, '.xls,.xml,application/vnd.ms-excel,application/xml,text/xml');
   }
 
   const viewDoc = viewing ? db.bupots.find((b) => b.id === viewing) : null;

@@ -82,7 +82,7 @@ export interface RoleAssignment {
 }
 
 export interface SignatureLog {
-  provider: 'KODE_OTORISASI_DJP' | 'SERTIFIKAT_ELEKTRONIK';
+  provider: CertificateProvider;
   signerNik: string;
   signedAt: string;
 }
