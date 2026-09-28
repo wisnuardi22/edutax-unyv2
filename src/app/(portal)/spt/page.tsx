@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
 import { emptyManualRows, type SptStatus } from '@/lib/domain/types';
 import { canDraftSpt, canSignSpt, explainDeniedSpt, filterVisibleSpts } from '@/lib/auth/access';
+import { buildArticleSummary, totalNetPayable } from '@/lib/domain/sptCalc';
+import { printAsPdf } from '@/lib/storage/csv';
+import { Download, Eye, FileCheck2, Pencil, Trash2 } from 'lucide-react';
 
 /**
  * Daftar SPT Masa. Sidebar dan alur ini mengikuti slide 115-119 apa adanya:
@@ -67,6 +70,50 @@ export default function SptListPage() {
     });
   }
 
+  /** Klik icon unduh (Download) — "mengunduh formulir induk SPT Masa PPh Pasal 21". */
+  function downloadInduk(sptId: string) {
+    const s = db.spts.find((x) => x.id === sptId);
+    if (!s) return;
+    const entity = db.entities.find((e) => e.tin === s.entityTin);
+    const a21 = buildArticleSummary(s, db.bupots, '21');
+    const a26 = buildArticleSummary(s, db.bupots, '26');
+    const rows: (string | number)[][] = [
+      ['', 'NPWP', '', s.entityTin],
+      ['', 'Nama Wajib Pajak', '', entity?.name ?? '-'],
+      ...a21.withheld.map((r) => [`B.${r.no}`, r.uraian, r.kapKjs, r.jumlah]),
+      ...a21.borneByGovernment.map((r) => [`B.II.${r.no}`, r.uraian, r.kapKjs, r.jumlah]),
+      ...a26.withheld.map((r) => [`C.${r.no}`, r.uraian, r.kapKjs, r.jumlah]),
+      ...a26.borneByGovernment.map((r) => [`C.II.${r.no}`, r.uraian, r.kapKjs, r.jumlah]),
+      ['', 'Total PPh Kurang (Lebih) Bayar', '', totalNetPayable(s, db.bupots)],
+    ];
+    printAsPdf(
+      `Induk SPT Masa PPh Pasal 21/26 — ${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`,
+      ['No', 'Uraian', 'KAP-KJS', 'Jumlah (Rp)'],
+      rows,
+    );
+  }
+
+  /** Klik icon dokumen — "mengunduh Bukti Penerimaan Elektronik SPT Masa". */
+  function downloadBpe(sptId: string) {
+    const s = db.spts.find((x) => x.id === sptId);
+    if (!s) return;
+    const entity = db.entities.find((e) => e.tin === s.entityTin);
+    printAsPdf(
+      'Bukti Penerimaan Elektronik (BPE)',
+      ['Keterangan', 'Nilai'],
+      [
+        ['NPWP', s.entityTin],
+        ['Nama Wajib Pajak', entity?.name ?? '-'],
+        ['Jenis SPT', 'SPT Masa PPh Pasal 21/26'],
+        ['Masa Pajak', `${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`],
+        ['Model', s.model === 'NORMAL' ? 'Normal' : `Pembetulan ke-${s.pembetulanKe}`],
+        ['NTPA/Nomor Tanda Terima', s.id.slice(0, 16).toUpperCase()],
+        ['Tanggal Lapor', s.submittedAt ? new Date(s.submittedAt).toLocaleString('id-ID') : '-'],
+        ['Status', 'DILAPORKAN'],
+      ],
+    );
+  }
+
   return (
     <div className="grid min-w-0 gap-4 lg:grid-cols-[minmax(220px,20%)_minmax(0,1fr)]">
       <aside className="rounded-card bg-white p-3 shadow-card">
@@ -126,15 +173,26 @@ export default function SptListPage() {
                   <td>{s.model === 'NORMAL' ? 'Normal' : `Pembetulan ke-${s.pembetulanKe}`}</td>
                   <td className="flex gap-2">
                     <button
-                      className="text-brand-600 hover:underline"
+                      className="text-brand-600 hover:text-brand-800"
+                      title={status === 'KONSEP' ? 'Lihat/lengkapi' : 'Detail'}
                       onClick={() => router.push(`/spt/${s.id}`)}
                     >
-                      {status === 'KONSEP' ? 'Lihat' : 'Detail'}
+                      {status === 'KONSEP' ? <Pencil size={15} /> : <Eye size={15} />}
                     </button>
                     {status === 'KONSEP' && canDraftSptRole && (
-                      <button className="text-bad hover:underline" onClick={() => removeDraft(s.id)}>
-                        Hapus
+                      <button className="text-bad hover:text-red-800" title="Hapus" onClick={() => removeDraft(s.id)}>
+                        <Trash2 size={15} />
                       </button>
+                    )}
+                    {status === 'DILAPORKAN' && (
+                      <>
+                        <button className="text-brand-600 hover:text-brand-800" title="Unduh formulir induk" onClick={() => downloadInduk(s.id)}>
+                          <Download size={15} />
+                        </button>
+                        <button className="text-good hover:text-green-800" title="Unduh Bukti Penerimaan Elektronik (BPE)" onClick={() => downloadBpe(s.id)}>
+                          <FileCheck2 size={15} />
+                        </button>
+                      </>
                     )}
                   </td>
                 </tr>

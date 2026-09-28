@@ -22,7 +22,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'Pegawai Tetap',
     nip: '198507012010011001',
     golongan: 'IIIa',
-    employerTin: '0012345678910000',
+    employerTin: '1871121205870009',
   },
   {
     nik: '3404051503890002',
@@ -37,7 +37,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'PNS',
     nip: '198903152012022002',
     golongan: 'IIIb',
-    employerTin: '0012345678910000',
+    employerTin: '3404051503890002',
   },
   {
     nik: '3471081108920003',
@@ -52,7 +52,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'Pegawai Tetap',
     nip: '199208112015011003',
     golongan: 'IIa',
-    employerTin: '0012345678910000',
+    employerTin: '3471081108920003',
   },
   {
     nik: '3372022009910004',
@@ -67,7 +67,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'Pegawai Tetap',
     nip: '199109202016022004',
     golongan: 'IIIa',
-    employerTin: '0012345678910000',
+    employerTin: '3372022009910004',
   },
   {
     nik: '3578040207880005',
@@ -82,7 +82,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'PNS',
     nip: '198804072009011005',
     golongan: 'IVa',
-    employerTin: '0012345678910000',
+    employerTin: '3578040207880005',
   },
   {
     nik: '3216091412870006',
@@ -97,7 +97,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'Pegawai Tetap',
     nip: '198712142011022006',
     golongan: 'IIb',
-    employerTin: '0012345678910000',
+    employerTin: '3216091412870006',
   },
   {
     nik: '3175051006950007',
@@ -110,7 +110,7 @@ export const PRACTICE_PERSON_SEEDS = [
     jabatan: 'Pensiunan Staf',
     ptkp: 'K/0',
     statusPegawai: 'Pensiunan',
-    employerTin: '0012345678910000',
+    employerTin: '3175051006950007',
   },
   {
     nik: '3273010311930008',
@@ -123,7 +123,7 @@ export const PRACTICE_PERSON_SEEDS = [
     jabatan: 'Konsultan Pajak',
     ptkp: 'TK/0',
     statusPegawai: 'Bukan Pegawai',
-    employerTin: '0012345678910000',
+    employerTin: '3273010311930008',
   },
   {
     // Contoh pegawai berstatus asing/WNA — untuk menguji toggle Foreign Employee di BPMP.
@@ -140,7 +140,7 @@ export const PRACTICE_PERSON_SEEDS = [
     statusPegawai: 'Pegawai Tetap',
     nip: '200001012021011009',
     golongan: '-',
-    employerTin: '0012345678910000',
+    employerTin: '9500000000000009',
   },
   {
     // Contoh NIK yang SENGAJA tidak padan — untuk menguji sentinel 9990000000999000.
@@ -148,7 +148,7 @@ export const PRACTICE_PERSON_SEEDS = [
     nama: 'Contoh Tidak Padan',
     alamat: 'Tidak diketahui',
     negara: 'Indonesia',
-    employerTin: '0012345678910000',
+    employerTin: '3200000000000010',
     padan: false,
   },
 ] as const;

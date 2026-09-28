@@ -486,7 +486,7 @@ function LampiranBulanan({
   entityTin: string;
   month: number;
   year: number;
-  rows: { id: string; counterpartTin: string; counterpartName: string; withholdingNumber: string | null; gross: number; withheld: number; createdAt: string }[];
+  rows: { id: string; counterpartTin: string; counterpartName: string; withholdingNumber: string | null; taxObjectCode: string; gross: number; withheld: number; createdAt: string }[];
 }) {
   return (
     <div className="mt-4">
@@ -506,13 +506,15 @@ function LampiranBulanan({
             <th>NIK/NPWP</th>
             <th>Nama</th>
             <th>Nomor Bukti Pemotongan</th>
-            <th className="text-right">Bruto</th>
-            <th className="text-right">PPh Dipotong</th>
+            <th>Tanggal Bukti Pemotongan</th>
+            <th>Kode Objek Pajak</th>
+            <th className="text-right">Penghasilan Bruto (Rp)</th>
+            <th className="text-right">Pajak Penghasilan (Rp)</th>
           </tr>
         </thead>
         <tbody>
           {rows.length === 0 && (
-            <tr><td colSpan={6} className="py-6 text-center text-ink-muted">Tidak ada data yang ditemukan.</td></tr>
+            <tr><td colSpan={8} className="py-6 text-center text-ink-muted">Tidak ada data yang ditemukan.</td></tr>
           )}
           {rows.map((r, i) => (
             <tr key={r.id}>
@@ -520,6 +522,8 @@ function LampiranBulanan({
               <td className="font-mono">{r.counterpartTin}</td>
               <td>{r.counterpartName}</td>
               <td className="font-mono">{r.withholdingNumber}</td>
+              <td>{new Date(r.createdAt).toLocaleDateString('id-ID').replace(/\//g, '-')}</td>
+              <td className="font-mono">{r.taxObjectCode}</td>
               <td className="text-right">{rupiah(r.gross)}</td>
               <td className="text-right">{rupiah(r.withheld)}</td>
             </tr>
@@ -606,7 +610,7 @@ function LampiranSelainPegawaiTetap({
   entityTin: string;
   month: number;
   year: number;
-  bupots: { id: string; kind: string; entityTin: string; status: string; taxPeriodMonth: number; taxPeriodYear: number; counterpartTin: string; counterpartName: string; withholdingNumber: string | null; gross: number; withheld: number }[];
+  bupots: { id: string; kind: string; entityTin: string; status: string; taxPeriodMonth: number; taxPeriodYear: number; counterpartTin: string; counterpartName: string; withholdingNumber: string | null; taxObjectCode: string; gross: number; withheld: number; createdAt: string }[];
 }) {
   const [sub, setSub] = useState<'BP21' | 'BP26'>('BP21');
   const rows = bupots.filter(
@@ -637,9 +641,12 @@ function LampiranSelainPegawaiTetap({
           <tr>
             <th>NIK/NPWP</th>
             <th>Nama</th>
+            <th>Jenis Pajak</th>
             <th>Nomor Bukti Pemotongan</th>
-            <th className="text-right">Bruto</th>
-            <th className="text-right">PPh Dipotong</th>
+            <th>Tanggal Bukti Pemotongan</th>
+            <th>Kode Objek Pajak</th>
+            <th className="text-right">Penghasilan Bruto (Rp)</th>
+            <th className="text-right">Pajak Penghasilan (Rp)</th>
           </tr>
         </thead>
         <tbody>
