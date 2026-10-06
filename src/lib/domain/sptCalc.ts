@@ -99,3 +99,63 @@ export function totalNetPayable(spt: SptDoc, bupots: BupotDoc[]): number {
   const a26 = buildArticleSummary(spt, bupots, '26');
   return a21.netPayable + a26.netPayable;
 }
+
+/**
+ * Ringkasan Induk SPT Masa PPh Unifikasi (Halaman Utama bagian B, slide
+ * 21-22): dikelompokkan per Article (4 Section 2/15/22/23/26), masing-masing
+ * dipecah per KAP-KJS. Kolom "Withholding" dijumlahkan dari BPPU berstatus
+ * ISSUED pada masa pajak yang sama (persis pola Pasal 21/26 di atas); kolom
+ * "Self Payment" dijumlahkan dari Daftar-II (`daftarIISendiri` +
+ * `daftarIIKumulatif`) berdasarkan kode objek pajak yang sama.
+ *
+ * PENTING: kolom "Income Tax Borne by Government" dan "Amount of Income Tax
+ * Paid (From Previous Return)" pada slide 21-22 BELUM dihitung di sini —
+ * ditandai 0 apa adanya, bukan tebakan, sesuai instruksi untuk menandai
+ * bagian yang belum dapat diverifikasi alih-alih mengarang rumusnya.
+ */
+export interface UnifikasiKjsRow {
+  kapKjs: string;
+  selfPayment: number;
+  withholding: number;
+}
+export interface UnifikasiArticleGroup {
+  article: string;
+  rows: UnifikasiKjsRow[];
+  subtotal: number;
+}
+
+const BPPU_ARTICLE_KAP: { article: string; kaps: string[] }[] = [
+  { article: 'Article 4 Section 2', kaps: ['411128-100', '411128-402', '411128-403'] },
+  { article: 'Article 15', kaps: ['411128-600', '411129-600'] },
+  { article: 'Article 22', kaps: ['411122-100', '411122-900', '411122-910'] },
+  { article: 'Article 23', kaps: ['411124-100'] },
+  { article: 'Article 26', kaps: ['411127-110'] },
+];
+
+export function buildUnifikasiSummary(spt: SptDoc, bupots: BupotDoc[]): {
+  groups: UnifikasiArticleGroup[];
+  totalWithholding: number;
+  totalSelfPayment: number;
+  grandTotal: number;
+} {
+  const issued = bupots.filter(
+    (b) => b.kind === 'BPPU' && b.status === 'ISSUED'
+      && b.entityTin === spt.entityTin
+      && b.taxPeriodMonth === spt.taxPeriodMonth
+      && b.taxPeriodYear === spt.taxPeriodYear,
+  );
+  const selfRows = [...(spt.daftarIISendiri ?? []), ...(spt.daftarIIKumulatif ?? [])];
+
+  const groups: UnifikasiArticleGroup[] = BPPU_ARTICLE_KAP.map(({ article, kaps }) => {
+    const rows = kaps.map((kapKjs) => ({
+      kapKjs,
+      withholding: issued.filter((b) => String(b.fields.kap ?? '') === kapKjs).reduce((s, b) => s + b.withheld, 0),
+      selfPayment: selfRows.filter((r) => r.kodeObjekPajak === kapKjs).reduce((s, r) => s + r.pph, 0),
+    }));
+    return { article, rows, subtotal: rows.reduce((s, r) => s + r.withholding + r.selfPayment, 0) };
+  });
+
+  const totalWithholding = groups.reduce((s, g) => s + g.rows.reduce((x, r) => x + r.withholding, 0), 0);
+  const totalSelfPayment = groups.reduce((s, g) => s + g.rows.reduce((x, r) => x + r.selfPayment, 0), 0);
+  return { groups, totalWithholding, totalSelfPayment, grandTotal: totalWithholding + totalSelfPayment };
+}

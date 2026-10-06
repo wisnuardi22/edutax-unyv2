@@ -155,6 +155,18 @@ export interface Declaration {
   signerName: string;
 }
 
+/** Satu baris pada Daftar-II (PPh Setor Sendiri) SPT Masa PPh Unifikasi — slide 25-26. */
+export interface DaftarIISetorSendiriRow {
+  id: string;
+  jenisPajak: string;
+  kodeObjekPajak: string;
+  objekPajak: string;
+  dpp: number;
+  tarif: number;
+  pph: number;
+  fasilitas: string;
+}
+
 export interface SptDoc {
   id: string;
   kind: SptKind;
@@ -166,6 +178,10 @@ export interface SptDoc {
   status: SptStatus;
   manualArticle21: SptManualRows;
   manualArticle26: SptManualRows;
+  /** Daftar-II Tabel I (Pembayaran Sendiri) — khusus kind PPH_UNIFIKASI. */
+  daftarIISendiri: DaftarIISetorSendiriRow[];
+  /** Daftar-II Tabel II (Pembayaran Kumulatif) — khusus kind PPH_UNIFIKASI. */
+  daftarIIKumulatif: DaftarIISetorSendiriRow[];
   declaration: Declaration;
   signature: SignatureLog | null;
   billing: BillingInfo | null;

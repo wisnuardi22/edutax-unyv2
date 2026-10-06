@@ -10,7 +10,7 @@ import type { NavSubItem } from '@/components/layout/NavDropdown';
  * supaya dropdown ini tidak berujung 404 sebelum modulnya dibangun.
  */
 export const EBUPOT_MENU: NavSubItem[] = [
-  { label: 'BPPU', href: '/ebupot/bppu', badge: 'Segera' },
+  { label: 'BPPU', href: '/ebupot/bppu' },
   { label: 'BPNR', href: '/ebupot/bpnr', badge: 'Segera' },
   { label: 'Penyetoran Sendiri', href: '/ebupot/bpss', badge: 'Segera' },
   { label: 'Pemotongan Secara Digunggung', href: '/ebupot/bpdgg', badge: 'Segera' },

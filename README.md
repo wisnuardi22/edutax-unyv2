@@ -376,8 +376,42 @@ adanya:
    `lib/domain/ebupotMenu.ts`), persis menu asli Coretax. `NavDropdown` jadi
    generik (terima prop `href`) supaya bisa dipakai untuk "Portal Saya" dan
    "eBupot" sekaligus.
-6. Modul BPPU untuk Unifikasi beserta SPT Masa Unifikasi (Induk, Daftar-I,
-   Daftar-II), memakai pola yang sama dengan SPT PPh 21/26.
+6. ~~Modul BPPU untuk Unifikasi beserta SPT Masa Unifikasi~~ **Selesai** —
+   dibangun dari PDF "E-Bupot Unifikasi" (28 halaman, dibaca sebagai
+   gambar, bukan cuma teks — tekstualnya nyaris kosong). Lihat
+   `ebupot/bppu/page.tsx`, `lib/domain/bppu.ts`, dan cabang
+   `UnifikasiSptView` di `spt/[id]/page.tsx` (sengaja TIDAK jadi halaman/
+   route baru — tetap di URL `/spt/[id]`, cuma render berbeda berdasar
+   `spt.kind`, sesuai permintaan "jangan buat halaman SPT baru yang
+   terpisah"). Temuan penting dari PDF yang mengoreksi asumsi awal:
+   - **Satu formulir BPU untuk semua pasal** (4 ayat 2, 15, 22, 23, 26) —
+     bukan wizard "pilih jenis dulu". "Nama Objek Pajak" yang dipilih
+     meng-auto-isi Jenis Pajak/Tax Article/Kode Objek Pajak/Sifat, persis
+     pola Tax Object Name di BPMP/BP21.
+   - **Tidak ada Sign Document untuk BPPU** — PDF (slide 2-13) tidak pernah
+     menunjukkan dialog tanda tangan untuk BPU, beda dari BP21/BPA2.
+     Terbitkan langsung posting, persis pola BPMP.
+   - **Status SUBMITTED sengaja tetap di tab Belum Terbit** sampai
+     Terbitkan berhasil (slide 13, dikonfirmasi eksplisit) — sudah otomatis
+     benar karena memakai `tabOf()` yang sama dengan BPMP/BP21.
+   - Hanya **satu objek pajak yang benar-benar terverifikasi** dari PDF:
+     "Persewaan Tanah dan/atau Bangunan" (Pasal 4 ayat 2, kode 28-403-02,
+     tarif 10%, KAP 411128-403, dari slide 11). Objek Pasal 23 lain di
+     `bppu.ts` memakai pengetahuan umum UU PPh Pasal 23 dan ditandai jelas
+     "perlu dikonfirmasi" — PDF-nya sendiri berhenti di langkah pilih
+     Fasilitas Pajak (slide 7) sebelum sampai ke Income Tax Pasal 23 terisi.
+   - **SPT Unifikasi**: Induk (5 kelompok artikel dari tabel B slide 21-22,
+     masing-masing dipecah per KAP-KJS), DAFTAR-I (otomatis dari BPPU
+     ISSUED), DAFTAR-II (dua tabel — Pembayaran Sendiri & Kumulatif, bisa
+     tambah/edit/hapus baris manual), LAMPIRAN-I (**stub** — tabel "ATC"
+     alokasi antar cabang di slide 27 kosong di contoh PDF, field-nya
+     dicatat tapi belum diimplementasikan sebagai tabel interaktif).
+   - Kolom "Income Tax Borne by Government" dan "Paid from Previous Return"
+     pada Induk SPT **belum dihitung** (ditandai 0, bukan ditebak) —
+     rumusnya tidak pernah ditunjukkan terisi di PDF.
+   - `SptDoc` dapat field baru `daftarIISendiri`/`daftarIIKumulatif` —
+     `SCHEMA_VERSION` dinaikkan ke 4 supaya data lama di localStorage siswa
+     otomatis bersih, bukan crash karena field hilang.
 7. Alur SPT Ditolak dan SPT Dibatalkan belum punya pemicu (trigger) di UI;
    saat ini kedua status hanya siap menampung data bila suatu saat diisi lewat
    simulasi penolakan DJP atau pembatalan oleh Wajib Pajak.

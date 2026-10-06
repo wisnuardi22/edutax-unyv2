@@ -1,12 +1,14 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
 import { SignDialog } from '@/components/ui/SignDialog';
-import { buildArticleSummary, totalNetPayable, type ArticleSummaryRow } from '@/lib/domain/sptCalc';
-import type { CertificateProvider, SptManualRows } from '@/lib/domain/types';
+import { buildArticleSummary, buildUnifikasiSummary, totalNetPayable, type ArticleSummaryRow } from '@/lib/domain/sptCalc';
+import type { CertificateProvider, DaftarIISetorSendiriRow, SptDoc, SptManualRows } from '@/lib/domain/types';
+import type { Database } from '@/lib/storage/db';
 import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
+import { BPPU_ARTICLE_LABEL } from '@/lib/domain/bppu';
 
 /**
  * Halaman isi SPT Masa PPh Pasal 21/26. Lima tab dan susunan bagian mengikuti
@@ -61,6 +63,19 @@ export default function SptEditorPage() {
       <p className="rounded-card bg-white p-5 text-sm shadow-card">
         {explainDeniedSpt('draft', spt.kind)}
       </p>
+    );
+  }
+
+  if (spt.kind === 'PPH_UNIFIKASI') {
+    return (
+      <UnifikasiSptView
+        spt={spt}
+        db={db}
+        mutate={mutate}
+        router={router}
+        canDraftSptRole={canDraftSptRole}
+        canSignSptRole={canSignSptRole}
+      />
     );
   }
 
@@ -668,6 +683,427 @@ function LampiranSelainPegawaiTetap({
         Pada bagian ini ditampilkan data bukti pemotongan {sub === 'BP21' ? 'PPh Pasal 21' : 'PPh Pasal 26'} kepada
         selain pegawai tetap. Modul pembuatan {sub} disiapkan pada tahap pengembangan berikutnya.
       </p>
+    </div>
+  );
+}
+
+type UnifikasiTab = 'UTAMA' | 'DAFTAR-I' | 'DAFTAR-II' | 'LAMPIRAN-I';
+const UNIF_TABS: { key: UnifikasiTab; label: string }[] = [
+  { key: 'UTAMA', label: 'SPT Masa PPh Unifikasi' },
+  { key: 'DAFTAR-I', label: 'DAFTAR-I' },
+  { key: 'DAFTAR-II', label: 'DAFTAR-II' },
+  { key: 'LAMPIRAN-I', label: 'LAMPIRAN-I' },
+];
+
+/**
+ * SPT Masa PPh Unifikasi — slide 15-27 "E-Bupot Unifikasi". Dirender sebagai
+ * cabang terpisah dari komponen utama (bukan halaman baru — URL /spt/[id]
+ * tetap sama), karena strukturnya jauh berbeda dari Pasal 21/26: 4 tab
+ * (SPT Masa PPh Unifikasi / DAFTAR-I / DAFTAR-II / LAMPIRAN-I), bukan
+ * UTAMA/L-IA/L-IB/L-II/L-III.
+ */
+function UnifikasiSptView({
+  spt,
+  db,
+  mutate,
+  router,
+  canDraftSptRole,
+  canSignSptRole,
+}: {
+  spt: SptDoc;
+  db: Database;
+  mutate: (fn: (d: Database) => void) => void;
+  router: ReturnType<typeof useRouter>;
+  canDraftSptRole: boolean;
+  canSignSptRole: boolean;
+}) {
+  const [tab, setTab] = useState<UnifikasiTab>('UTAMA');
+  const [signing, setSigning] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const entity = db.entities.find((e) => e.tin === spt.entityTin);
+  const summary = useMemo(() => buildUnifikasiSummary(spt, db.bupots), [spt, db.bupots]);
+  const isKonsep = spt.status === 'KONSEP';
+  const editable = isKonsep && canDraftSptRole;
+  const declarationEditable = isKonsep && canSignSptRole;
+  const net = summary.grandTotal;
+
+  function saveField(patch: Partial<SptDoc>) {
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (s) Object.assign(s, patch);
+    });
+  }
+
+  function addDaftarIIRow(table: 'daftarIISendiri' | 'daftarIIKumulatif') {
+    if (!editable) return;
+    const row: DaftarIISetorSendiriRow = {
+      id: crypto.randomUUID(), jenisPajak: '', kodeObjekPajak: '', objekPajak: '',
+      dpp: 0, tarif: 0, pph: 0, fasilitas: 'Tanpa Fasilitas',
+    };
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (s) s[table] = [...s[table], row];
+    });
+  }
+
+  function updateDaftarIIRow(table: 'daftarIISendiri' | 'daftarIIKumulatif', rowId: string, patch: Partial<DaftarIISetorSendiriRow>) {
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (!s) return;
+      s[table] = s[table].map((r) => {
+        if (r.id !== rowId) return r;
+        const next = { ...r, ...patch };
+        next.pph = Math.floor((next.dpp * next.tarif) / 100);
+        return next;
+      });
+    });
+  }
+
+  function removeDaftarIIRow(table: 'daftarIISendiri' | 'daftarIIKumulatif', rowId: string) {
+    if (!editable) return;
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (s) s[table] = s[table].filter((r) => r.id !== rowId);
+    });
+  }
+
+  function saveDraft() {
+    if (!canDraftSptRole) return;
+    setNotice('Konsep SPT tersimpan.');
+  }
+
+  function submit(password: string, provider: CertificateProvider) {
+    if (!password || !canSignSptRole) return;
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (!s) return;
+      s.signature = { provider, signerNik: d.session!.personNik, signedAt: new Date().toISOString() };
+      if (net > 0) {
+        s.status = 'MENUNGGU_PEMBAYARAN';
+        const created = new Date();
+        const expires = new Date(created.getTime() + 48 * 3600 * 1000);
+        s.billing = {
+          kodeBilling: String(Math.floor(1_000_000_000_000_000 + Math.random() * 9_000_000_000_000_000)),
+          kapKjs: '411121-100',
+          masaPajak: `${String(s.taxPeriodMonth).padStart(2, '0')}-${s.taxPeriodYear}`,
+          nominal: net,
+          createdAt: created.toISOString(),
+          expiresAt: expires.toISOString(),
+        };
+      } else {
+        s.status = 'DILAPORKAN';
+        s.submittedAt = new Date().toISOString();
+      }
+    });
+    setSigning(false);
+    setNotice(
+      net > 0
+        ? 'Dokumen berhasil ditandatangani. Kode billing telah terbit — selesaikan pembayaran pada tab SPT Menunggu Pembayaran.'
+        : 'Dokumen berhasil ditandatangani. SPT nihil ini langsung tercatat sebagai Dilaporkan.',
+    );
+  }
+
+  function pay() {
+    if (!canSignSptRole) return;
+    mutate((d) => {
+      const s = d.spts.find((x) => x.id === spt.id);
+      if (!s) return;
+      s.status = 'DILAPORKAN';
+      s.submittedAt = new Date().toISOString();
+    });
+    setNotice('Pembayaran tercatat. SPT otomatis tersampaikan tanpa perlu input NTPN.');
+  }
+
+  const daftarIRows = db.bupots.filter(
+    (b) => b.kind === 'BPPU' && b.status === 'ISSUED'
+      && b.entityTin === spt.entityTin
+      && b.taxPeriodMonth === spt.taxPeriodMonth
+      && b.taxPeriodYear === spt.taxPeriodYear,
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <button className="text-[13px] text-brand-600 hover:underline" onClick={() => router.push('/spt')}>
+          ← Kembali ke daftar SPT
+        </button>
+      </div>
+
+      <section className="rounded-card bg-white p-4 shadow-card">
+        <h1 className="font-semibold">SPT MASA PPH UNIFIKASI</h1>
+        <div className="mt-3 flex gap-1 border-b border-line text-[13px]">
+          {UNIF_TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`-mb-px border-b-2 px-3 py-2 ${tab === t.key ? 'border-brand-600 font-semibold text-brand-700' : 'border-transparent text-ink-muted'}`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {notice && (
+          <p className="mt-3 rounded-md border border-brand-200 bg-brand-50 px-3 py-2 text-[13px] text-brand-800">
+            {notice}
+          </p>
+        )}
+
+        {tab === 'UTAMA' && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <p className="text-[13px] font-semibold text-ink-muted">A. Identitas Pemotong</p>
+              <dl className="mt-2 grid grid-cols-2 gap-y-1 text-[13px] sm:grid-cols-4">
+                <dt className="text-ink-muted">Periode Pajak</dt>
+                <dd>{String(spt.taxPeriodMonth).padStart(2, '0')}/{spt.taxPeriodYear}</dd>
+                <dt className="text-ink-muted">NPWP/NIK</dt><dd className="font-mono">{spt.entityTin}</dd>
+                <dt className="text-ink-muted">Nama Lengkap</dt><dd>{entity?.name ?? '—'}</dd>
+                <dt className="text-ink-muted">Alamat</dt><dd>{entity?.address ?? '—'}</dd>
+              </dl>
+            </div>
+
+            <div>
+              <p className="text-[13px] font-semibold text-ink-muted">B. Pajak Penghasilan</p>
+              <div className="mt-2 overflow-x-auto">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Uraian</th>
+                      <th className="text-right">Self Payment (Rp)</th>
+                      <th className="text-right">Withholding (Rp)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.groups.map((g) => (
+                      <Fragment key={g.article}>
+                        <tr>
+                          <td className="font-semibold">{g.article}</td>
+                          <td />
+                          <td />
+                        </tr>
+                        {g.rows.map((r) => (
+                          <tr key={r.kapKjs}>
+                            <td className="pl-4 text-xxs text-ink-muted">KJS:{r.kapKjs}</td>
+                            <td className="text-right">{rupiah(r.selfPayment)}</td>
+                            <td className="text-right">{rupiah(r.withholding)}</td>
+                          </tr>
+                        ))}
+                      </Fragment>
+                    ))}
+                    <tr className="font-semibold">
+                      <td>TOTAL OF INCOME TAX</td>
+                      <td className="text-right">{rupiah(summary.totalSelfPayment)}</td>
+                      <td className="text-right">{rupiah(summary.totalWithholding)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-1 text-xxs text-ink-muted">
+                Kolom "Income Tax Borne by Government" dan "Paid from Previous Return" belum dihitung pada
+                simulasi ini (lihat catatan PENTING di <code>sptCalc.ts</code>).
+              </p>
+            </div>
+
+            <div>
+              <p className="text-[13px] font-semibold text-ink-muted">C. Pernyataan dan Tanda Tangan</p>
+              {declarationEditable ? (
+                <DeclarationForm
+                  spt={spt}
+                  personName={db.session!.personName}
+                  onChange={(patch) => saveField({ declaration: { ...spt.declaration, ...patch } })}
+                />
+              ) : (
+                <div className="mt-2 grid gap-2 text-[13px] sm:grid-cols-3">
+                  <ReadField label="Ditandatangani oleh" value={spt.declaration.signedAs === 'TAXPAYER' ? 'Subjek Pajak/Wajib Pajak' : 'Wakil/Kuasa'} />
+                  <ReadField label="Nama" value={spt.declaration.signerName} />
+                  <ReadField label="Ditandatangani pada" value={spt.signature ? new Date(spt.signature.signedAt).toLocaleString('id-ID') : '-'} />
+                </div>
+              )}
+
+              {isKonsep && (
+                <div className="mt-4 flex gap-2">
+                  <button className="btn-secondary" onClick={saveDraft} disabled={!canDraftSptRole}>Simpan Konsep</button>
+                  <button
+                    className="btn-primary"
+                    onClick={() => setSigning(true)}
+                    disabled={!canSignSptRole || !spt.declaration.agreed || !spt.declaration.signerName}
+                    title={!canSignSptRole ? explainDeniedSpt('sign', 'PPH_UNIFIKASI') : undefined}
+                  >
+                    Bayar dan Lapor
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {spt.status === 'MENUNGGU_PEMBAYARAN' && spt.billing && (
+              <BillingCard billing={spt.billing} onPay={pay} disabled={!canSignSptRole} />
+            )}
+          </div>
+        )}
+
+        {tab === 'DAFTAR-I' && (
+          <div className="mt-4">
+            <p className="text-[13px] text-ink-muted">
+              Daftar Bukti Pemotongan/Pemungutan (BPPU) berstatus Telah Terbit pada masa pajak{' '}
+              {String(spt.taxPeriodMonth).padStart(2, '0')}/{spt.taxPeriodYear}.
+            </p>
+            <div className="mt-2 overflow-x-auto">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>NIK/NPWP</th><th>Nama</th><th>Nomor Bukti Potong</th><th>Tanggal</th>
+                    <th>Jenis Pajak</th><th>Kode Objek Pajak</th>
+                    <th className="text-right">DPP/Bruto</th><th className="text-right">PPh</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {daftarIRows.length === 0 && (
+                    <tr><td colSpan={8} className="py-6 text-center text-ink-muted">Tidak ada data yang ditemukan.</td></tr>
+                  )}
+                  {daftarIRows.map((b) => (
+                    <tr key={b.id}>
+                      <td className="font-mono text-xxs">{b.counterpartTin}</td>
+                      <td>{b.counterpartName}</td>
+                      <td className="font-mono">{b.withholdingNumber}</td>
+                      <td>{b.createdAt ? new Date(b.createdAt).toLocaleDateString('id-ID') : '-'}</td>
+                      <td>{BPPU_ARTICLE_LABEL[(b.fields.article as keyof typeof BPPU_ARTICLE_LABEL) ?? '23']}</td>
+                      <td className="font-mono">{b.taxObjectCode}</td>
+                      <td className="text-right">{rupiah(b.gross)}</td>
+                      <td className="text-right">{rupiah(b.withheld)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {tab === 'DAFTAR-II' && (
+          <div className="mt-4 space-y-6">
+            <DaftarIITable
+              title="Tabel I. Daftar Pajak Penghasilan - Pembayaran Sendiri"
+              rows={spt.daftarIISendiri}
+              editable={editable}
+              onAdd={() => addDaftarIIRow('daftarIISendiri')}
+              onUpdate={(rowId, patch) => updateDaftarIIRow('daftarIISendiri', rowId, patch)}
+              onRemove={(rowId) => removeDaftarIIRow('daftarIISendiri', rowId)}
+            />
+            <DaftarIITable
+              title="Tabel II. Daftar Pajak Penghasilan - Pembayaran Kumulatif"
+              rows={spt.daftarIIKumulatif}
+              editable={editable}
+              onAdd={() => addDaftarIIRow('daftarIIKumulatif')}
+              onUpdate={(rowId, patch) => updateDaftarIIRow('daftarIIKumulatif', rowId, patch)}
+              onRemove={(rowId) => removeDaftarIIRow('daftarIIKumulatif', rowId)}
+            />
+          </div>
+        )}
+
+        {tab === 'LAMPIRAN-I' && (
+          <div className="mt-4">
+            <p className="text-[13px] text-ink-muted">
+              LAMPIRAN-I (Tabel I. ATC — Alokasi Transaksi antar Cabang) belum diimplementasikan pada tahap
+              ini. Slide 27 PDF menunjukkan tabel ini kosong pada contoh, dengan kolom NIK/NPWP Penerima
+              Penghasilan, Nama Penerima Penghasilan, ID Akun Penerima Pendapatan, NIK/NPWP Pemberi
+              Penghasilan, Nama Pemberi Penghasilan, ID Akun Pemberi Penghasilan, dan Kode Objek Pajak —
+              dicatat untuk tahap pengembangan berikutnya.
+            </p>
+          </div>
+        )}
+      </section>
+
+      {signing && (
+        <SignDialog
+          signerNik={db.session!.personNik}
+          credential={db.mainAccountProfile?.signingCredential ?? null}
+          onCancel={() => setSigning(false)}
+          onConfirm={submit}
+        />
+      )}
+    </div>
+  );
+}
+
+function DaftarIITable({
+  title,
+  rows,
+  editable,
+  onAdd,
+  onUpdate,
+  onRemove,
+}: {
+  title: string;
+  rows: DaftarIISetorSendiriRow[];
+  editable: boolean;
+  onAdd: () => void;
+  onUpdate: (rowId: string, patch: Partial<DaftarIISetorSendiriRow>) => void;
+  onRemove: (rowId: string) => void;
+}) {
+  const total = rows.reduce((s, r) => s + r.pph, 0);
+  return (
+    <div>
+      <div className="flex items-center gap-2">
+        <p className="text-[13px] font-semibold text-ink-muted">{title}</p>
+        {editable && (
+          <button className="btn-secondary ml-auto text-xxs" onClick={onAdd}>+ Tambah Baris</button>
+        )}
+      </div>
+      <div className="mt-2 overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Jenis Pajak</th><th>Kode Objek Pajak</th><th>Objek Pajak</th>
+              <th className="text-right">DPP (Rp)</th><th className="text-right">Tarif (%)</th>
+              <th className="text-right">PPh (Rp)</th><th>Fasilitas</th><th />
+            </tr>
+          </thead>
+          <tbody>
+            {rows.length === 0 && (
+              <tr><td colSpan={8} className="py-6 text-center text-ink-muted">Tidak ada data yang ditemukan.</td></tr>
+            )}
+            {rows.map((r) => (
+              <tr key={r.id}>
+                <td>
+                  <input className="field-input" disabled={!editable} value={r.jenisPajak}
+                    onChange={(e) => onUpdate(r.id, { jenisPajak: e.target.value })} />
+                </td>
+                <td>
+                  <input className="field-input font-mono" disabled={!editable} value={r.kodeObjekPajak}
+                    onChange={(e) => onUpdate(r.id, { kodeObjekPajak: e.target.value })} />
+                </td>
+                <td>
+                  <input className="field-input" disabled={!editable} value={r.objekPajak}
+                    onChange={(e) => onUpdate(r.id, { objekPajak: e.target.value })} />
+                </td>
+                <td>
+                  <input type="number" className="field-input text-right" disabled={!editable} value={r.dpp}
+                    onChange={(e) => onUpdate(r.id, { dpp: +e.target.value })} />
+                </td>
+                <td>
+                  <input type="number" className="field-input text-right" disabled={!editable} value={r.tarif}
+                    onChange={(e) => onUpdate(r.id, { tarif: +e.target.value })} />
+                </td>
+                <td className="text-right">{rupiah(r.pph)}</td>
+                <td>
+                  <input className="field-input" disabled={!editable} value={r.fasilitas}
+                    onChange={(e) => onUpdate(r.id, { fasilitas: e.target.value })} />
+                </td>
+                <td>
+                  {editable && (
+                    <button className="text-bad hover:underline" onClick={() => onRemove(r.id)}>Hapus</button>
+                  )}
+                </td>
+              </tr>
+            ))}
+            <tr className="font-semibold">
+              <td colSpan={5}>TOTAL OF INCOME TAX TO BE PAID</td>
+              <td className="text-right">{rupiah(total)}</td>
+              <td colSpan={2} />
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

@@ -3,9 +3,9 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useDb } from '@/lib/storage/useDb';
-import { emptyManualRows, type SptStatus } from '@/lib/domain/types';
+import { emptyManualRows, type SptKind, type SptStatus } from '@/lib/domain/types';
 import { canDraftSpt, canSignSpt, explainDeniedSpt, filterVisibleSpts } from '@/lib/auth/access';
-import { buildArticleSummary, totalNetPayable } from '@/lib/domain/sptCalc';
+import { buildArticleSummary, buildUnifikasiSummary, totalNetPayable } from '@/lib/domain/sptCalc';
 import { printAsPdf } from '@/lib/storage/csv';
 import { Download, Eye, FileCheck2, Pencil, Trash2 } from 'lucide-react';
 
@@ -52,8 +52,12 @@ export default function SptListPage() {
     );
   }
 
-  const canDraftSptRole = canDraftSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
-  const canSignSptRole = canSignSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
+  const canDraft21 = canDraftSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
+  const canSign21 = canSignSpt(db.roleAssignments, db.session!, 'PPH_21_26', db.relatedParties);
+  const canDraftUnif = canDraftSpt(db.roleAssignments, db.session!, 'PPH_UNIFIKASI', db.relatedParties);
+  const canSignUnif = canSignSpt(db.roleAssignments, db.session!, 'PPH_UNIFIKASI', db.relatedParties);
+  const canDraftSptRole = canDraft21 || canDraftUnif;
+  const canSignSptRole = canSign21 || canSignUnif;
 
   if (!canDraftSptRole && !canSignSptRole) {
     return (
@@ -70,11 +74,29 @@ export default function SptListPage() {
     });
   }
 
-  /** Klik icon unduh (Download) — "mengunduh formulir induk SPT Masa PPh Pasal 21". */
+  /** Klik icon unduh (Download) — "mengunduh formulir induk SPT Masa PPh Pasal 21" (atau Unifikasi). */
   function downloadInduk(sptId: string) {
     const s = db.spts.find((x) => x.id === sptId);
     if (!s) return;
     const entity = db.entities.find((e) => e.tin === s.entityTin);
+    const jenis = s.kind === 'PPH_UNIFIKASI' ? 'PPh Unifikasi' : 'PPh Pasal 21/26';
+
+    if (s.kind === 'PPH_UNIFIKASI') {
+      const sum = buildUnifikasiSummary(s, db.bupots);
+      const rows: (string | number)[][] = [
+        ['', 'NPWP', '', s.entityTin],
+        ['', 'Nama Wajib Pajak', '', entity?.name ?? '-'],
+        ...sum.groups.flatMap((g) => g.rows.map((r) => [g.article, r.kapKjs, r.selfPayment, r.withholding])),
+        ['', 'TOTAL', sum.totalSelfPayment, sum.totalWithholding],
+      ];
+      printAsPdf(
+        `Induk SPT Masa ${jenis} — ${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`,
+        ['Article', 'KAP-KJS', 'Self Payment (Rp)', 'Withholding (Rp)'],
+        rows,
+      );
+      return;
+    }
+
     const a21 = buildArticleSummary(s, db.bupots, '21');
     const a26 = buildArticleSummary(s, db.bupots, '26');
     const rows: (string | number)[][] = [
@@ -87,7 +109,7 @@ export default function SptListPage() {
       ['', 'Total PPh Kurang (Lebih) Bayar', '', totalNetPayable(s, db.bupots)],
     ];
     printAsPdf(
-      `Induk SPT Masa PPh Pasal 21/26 — ${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`,
+      `Induk SPT Masa ${jenis} — ${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`,
       ['No', 'Uraian', 'KAP-KJS', 'Jumlah (Rp)'],
       rows,
     );
@@ -104,7 +126,7 @@ export default function SptListPage() {
       [
         ['NPWP', s.entityTin],
         ['Nama Wajib Pajak', entity?.name ?? '-'],
-        ['Jenis SPT', 'SPT Masa PPh Pasal 21/26'],
+        ['Jenis SPT', s.kind === 'PPH_UNIFIKASI' ? 'SPT Masa PPh Unifikasi' : 'SPT Masa PPh Pasal 21/26'],
         ['Masa Pajak', `${MONTHS[s.taxPeriodMonth - 1]} ${s.taxPeriodYear}`],
         ['Model', s.model === 'NORMAL' ? 'Normal' : `Pembetulan ke-${s.pembetulanKe}`],
         ['NTPA/Nomor Tanda Terima', s.id.slice(0, 16).toUpperCase()],
@@ -167,8 +189,8 @@ export default function SptListPage() {
               )}
               {rows.map((s) => (
                 <tr key={s.id}>
-                  <td>PPh Pasal 21/26</td>
-                  <td>SPT Masa PPh Pasal 21/26</td>
+                  <td>{s.kind === 'PPH_UNIFIKASI' ? 'PPh Unifikasi' : 'PPh Pasal 21/26'}</td>
+                  <td>{s.kind === 'PPH_UNIFIKASI' ? 'SPT Masa PPh Unifikasi' : 'SPT Masa PPh Pasal 21/26'}</td>
                   <td>{MONTHS[s.taxPeriodMonth - 1]} {s.taxPeriodYear}</td>
                   <td>{s.model === 'NORMAL' ? 'Normal' : `Pembetulan ke-${s.pembetulanKe}`}</td>
                   <td className="flex gap-2">
@@ -205,6 +227,8 @@ export default function SptListPage() {
       {wizardOpen && (
         <CreateWizard
           entityTin={entityTin}
+          canDraft21={canDraft21}
+          canDraftUnif={canDraftUnif}
           onClose={() => setWizardOpen(false)}
           onCreated={(id) => { setWizardOpen(false); router.push(`/spt/${id}`); }}
         />
@@ -215,16 +239,20 @@ export default function SptListPage() {
 
 function CreateWizard({
   entityTin,
+  canDraft21,
+  canDraftUnif,
   onClose,
   onCreated,
 }: {
   entityTin: string;
+  canDraft21: boolean;
+  canDraftUnif: boolean;
   onClose: () => void;
   onCreated: (id: string) => void;
 }) {
   const { db, mutate } = useDb();
   const [step, setStep] = useState(1);
-  const [jenisPajak, setJenisPajak] = useState<'PPH_21_26' | ''>('');
+  const [jenisPajak, setJenisPajak] = useState<SptKind | ''>('');
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth() + 1);
   const [year, setYear] = useState(now.getFullYear());
@@ -241,7 +269,7 @@ function CreateWizard({
     mutate((d) => {
       d.spts.push({
         id,
-        kind: 'PPH_21_26',
+        kind: (jenisPajak || 'PPH_21_26') as SptKind,
         model,
         pembetulanKe: model === 'PEMBETULAN' ? pembetulanKe : 0,
         entityTin,
@@ -250,6 +278,8 @@ function CreateWizard({
         status: 'KONSEP',
         manualArticle21: emptyManualRows(),
         manualArticle26: emptyManualRows(),
+        daftarIISendiri: [],
+        daftarIIKumulatif: [],
         declaration: { agreed: false, signedAs: 'TAXPAYER', signerName: '' },
         signature: null,
         billing: null,
@@ -286,14 +316,26 @@ function CreateWizard({
             <p className="text-[13px] font-medium">Langkah 1. Pilih jenis SPT yang akan dilaporkan</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <button
-                onClick={() => setJenisPajak('PPH_21_26')}
-                className={`rounded-md border p-3 text-left text-[13px] ${
+                onClick={() => canDraft21 && setJenisPajak('PPH_21_26')}
+                disabled={!canDraft21}
+                title={!canDraft21 ? explainDeniedSpt('draft', 'PPH_21_26') : undefined}
+                className={`rounded-md border p-3 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-40 ${
                   jenisPajak === 'PPH_21_26' ? 'border-brand-500 bg-brand-50' : 'border-line'
                 }`}
               >
                 PPh Pasal 21/26
               </button>
-              {['PPh Unifikasi', 'PPN Bagi Pemungut PPN dan Pihak Lain', 'PPh Final Pengungkapan Harta Bersih'].map((label) => (
+              <button
+                onClick={() => canDraftUnif && setJenisPajak('PPH_UNIFIKASI')}
+                disabled={!canDraftUnif}
+                title={!canDraftUnif ? explainDeniedSpt('draft', 'PPH_UNIFIKASI') : undefined}
+                className={`rounded-md border p-3 text-left text-[13px] disabled:cursor-not-allowed disabled:opacity-40 ${
+                  jenisPajak === 'PPH_UNIFIKASI' ? 'border-brand-500 bg-brand-50' : 'border-line'
+                }`}
+              >
+                PPh Unifikasi
+              </button>
+              {['PPN Bagi Pemungut PPN dan Pihak Lain', 'PPh Final Pengungkapan Harta Bersih'].map((label) => (
                 <button
                   key={label}
                   disabled
@@ -314,7 +356,9 @@ function CreateWizard({
         {step === 2 && (
           <div className="mt-5">
             <p className="text-[13px] font-medium">Langkah 2. Pilih periode pelaporan SPT</p>
-            <p className="mt-1 text-[13px] text-ink-muted">Jenis Surat Pemberitahuan Pajak: SPT Masa PPh Pasal 21/26</p>
+            <p className="mt-1 text-[13px] text-ink-muted">
+              Jenis Surat Pemberitahuan Pajak: {jenisPajak === 'PPH_UNIFIKASI' ? 'SPT Masa PPh Unifikasi' : 'SPT Masa PPh Pasal 21/26'}
+            </p>
             <div className="mt-3 grid max-w-sm grid-cols-2 gap-3">
               <select className="field-input" value={month} onChange={(e) => setMonth(+e.target.value)}>
                 {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
@@ -332,7 +376,7 @@ function CreateWizard({
           <div className="mt-5">
             <p className="text-[13px] font-medium">Langkah 3. Pilih Jenis SPT</p>
             <p className="mt-1 text-[13px] text-ink-muted">
-              Jenis Surat Pemberitahuan Pajak: SPT Masa PPh Pasal 21/26<br />
+              Jenis Surat Pemberitahuan Pajak: {jenisPajak === 'PPH_UNIFIKASI' ? 'SPT Masa PPh Unifikasi' : 'SPT Masa PPh Pasal 21/26'}<br />
               Periode dan Tahun Pajak: {MONTHS[month - 1]} {year}
             </p>
             <div className="mt-3 max-w-sm">
