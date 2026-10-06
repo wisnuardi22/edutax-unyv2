@@ -159,3 +159,51 @@ export function buildUnifikasiSummary(spt: SptDoc, bupots: BupotDoc[]): {
   const totalSelfPayment = groups.reduce((s, g) => s + g.rows.reduce((x, r) => x + r.selfPayment, 0), 0);
   return { groups, totalWithholding, totalSelfPayment, grandTotal: totalWithholding + totalSelfPayment };
 }
+
+export function periodGross(bupot: BupotDoc, all: BupotDoc[]): number {
+  if (bupot.kind !== 'BPA2') {
+    return bupot.gross;
+  }
+
+  const startMonth = Number(bupot.fields.startMonth ?? bupot.taxPeriodMonth);
+  const startYear = Number(bupot.fields.startYear ?? bupot.taxPeriodYear);
+
+  const sameRecipient = all.filter(
+    (b) =>
+      b.entityTin === bupot.entityTin &&
+      b.counterpartTin === bupot.counterpartTin &&
+      b.kind !== 'BPA2' &&
+      b.status === 'ISSUED',
+  );
+
+  const periodRows = sameRecipient.filter((b) => {
+    const value = b.taxPeriodYear * 12 + b.taxPeriodMonth;
+    const start = startYear * 12 + startMonth;
+    const end = bupot.taxPeriodYear * 12 + bupot.taxPeriodMonth;
+
+    return value >= start && value <= end;
+  });
+
+  return periodRows.reduce((sum, b) => sum + b.gross, 0);
+}
+
+export function periodWithheld(bupot: BupotDoc): number {
+  if (bupot.kind !== 'BPA2') {
+    return bupot.withheld;
+  }
+
+  const taxLiability = Number(
+    bupot.fields.taxLiability ??
+    bupot.fields.article21TaxLiabilityInThisSlip ??
+    0,
+  );
+
+  const taxWithheld = Number(
+    bupot.fields.taxWithheld ??
+    bupot.fields.article21TaxWithheld ??
+    bupot.withheld ??
+    0,
+  );
+
+  return taxWithheld - taxLiability;
+}
