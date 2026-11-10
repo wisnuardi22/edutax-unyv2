@@ -10,6 +10,8 @@ import { PORTAL_NAV_MENU } from '@/lib/domain/portal';
 import { EBUPOT_MENU } from '@/lib/domain/ebupotMenu';
 import { IdentitySwitcher } from './IdentitySwitcher';
 import { NavDropdown } from './NavDropdown';
+import { SEED_ENTITY } from '@/lib/domain/portal';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 /** Versi aplikasi EduTax sendiri — bukan nomor build Coretax DJP. */
 const APP_VERSION = '1.0.0-edutax';
@@ -36,6 +38,7 @@ function formatLoginTimestamp(iso: string): string {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { db, mutate } = useDb();
+  const { lang, setLang, t } = useLanguage();
   const session = db.session;
   const activeEntity = db.entities.find((e) => e.tin === session?.impersonatingTin);
 
@@ -54,7 +57,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   function resetPraktikum() {
-    if (!confirm('Seluruh data praktikum di browser ini akan dihapus. Lanjutkan?')) return;
+    if (!confirm(t('app.reset_confirm'))) return;
     resetDb();
     router.push('/login');
   }
@@ -140,6 +143,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   // terjadi di Coretax asli karena PIC selalu otomatis terisi saat registrasi,
   // tapi di sini disengaja kosong sebagai bahan latihan).
   const visibleEntities = db.entities.filter((e) => {
+    if (e.tin === SEED_ENTITY.tin) return true;
     const parties = db.relatedParties.filter((p) => p.entityTin === e.tin);
     if (parties.length === 0) return true;
     return parties.some((p) => p.personNik === session?.personNik)
@@ -171,7 +175,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="font-semibold">
               Edu<span className="text-brand-200">Tax</span>
             </span>
-            <span className="rounded bg-white/10 px-2 py-0.5 text-xxs">Simulasi Akademik</span>
+            <span className="rounded bg-white/10 px-2 py-0.5 text-xxs">{t('app.academic')}</span>
           </Link>
 
           {/*
@@ -183,18 +187,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex flex-wrap items-center gap-2 text-[13px]">
             <button
               onClick={() => window.location.reload()}
-              title="Muat ulang halaman"
+              title={t('app.reload')}
               className="rounded p-1.5 text-white/80 hover:bg-white/10 hover:text-white"
             >
               <RefreshCw size={15} />
             </button>
 
             <span className="rounded border border-white/15 bg-white/5 px-2 py-1 text-xxs whitespace-nowrap">
-              Versi: {APP_VERSION}
+              {t('app.version')}
             </span>
 
             <select
-              defaultValue="id"
+              value={lang}
+              onChange={(e) => setLang(e.target.value as 'id' | 'en')}
               title="Pemilihan bahasa"
               className="rounded border border-white/15 bg-brand-800 px-2 py-1 text-xxs text-white"
             >
@@ -202,8 +207,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <option value="en">en-US</option>
             </select>
 
-            <IconBadge icon={Bell} count={pendingCount} label="Notifikasi" />
-            <IconBadge icon={HelpCircle} count={0} label="Bantuan" />
+            <IconBadge icon={Bell} count={pendingCount} label={t('app.notifications')} />
+            <IconBadge icon={HelpCircle} count={0} label={t('app.help')} />
 
             <IdentitySwitcher
               personNik={session.personNik}
@@ -216,27 +221,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
 
             <span className="hidden whitespace-nowrap text-xxs text-white/70 lg:inline">
-              Login terakhir: {formatLoginTimestamp(session.loggedInAt)}
+              {t('app.last_login')}: {formatLoginTimestamp(session.loggedInAt)}
             </span>
 
             <button onClick={resetPraktikum} className="flex items-center gap-1.5 rounded px-2 py-1 hover:bg-white/10" title="Khusus EduTax: kosongkan seluruh data praktikum">
-              <RotateCcw size={15} /> <span className="hidden sm:inline">Reset data</span>
+              <RotateCcw size={15} /> <span className="hidden sm:inline">{t('app.reset_data')}</span>
             </button>
-            <button onClick={logout} className="rounded p-1.5 hover:bg-white/10" title="Keluar">
+            <button onClick={logout} className="rounded p-1.5 hover:bg-white/10" title={t('app.logout')}>
               <LogOut size={17} />
             </button>
           </div>
         </div>
 
         <nav className="flex flex-wrap items-center gap-1 border-t border-white/10 bg-brand-900 px-3 py-1.5 text-[13px]">
-          <NavDropdown label="Portal Saya" href="/portal" items={PORTAL_NAV_MENU} />
-          <Link href="/e-faktur" className="rounded px-2.5 py-1.5 hover:bg-white/10">e-Faktur</Link>
-          <NavDropdown label="eBupot" href="/ebupot/bpmp" items={EBUPOT_MENU} />
-          {MENU.map((m) => (
-            <Link key={m.href} href={m.href} className="rounded px-2.5 py-1.5 hover:bg-white/10">
-              {m.label}
-            </Link>
-          ))}
+          <NavDropdown label={t('nav.portal')} href="/portal" items={PORTAL_NAV_MENU} />
+          <Link href="/e-faktur" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.efaktur')}</Link>
+          <NavDropdown label={t('nav.ebupot')} href="/ebupot/bpmp" items={EBUPOT_MENU} />
+          <Link href="/spt" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.spt')}</Link>
+          <Link href="/pembayaran" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.payment')}</Link>
+          <Link href="/buku-besar" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.ledger')}</Link>
+          <Link href="/layanan" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.services')}</Link>
+          <Link href="/manajemen-akses" className="rounded px-2.5 py-1.5 hover:bg-white/10">{t('nav.access')}</Link>
         </nav>
       </header>
 

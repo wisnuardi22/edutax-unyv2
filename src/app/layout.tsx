@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
 import './globals.css';
+import { LanguageProvider } from '@/lib/i18n/LanguageContext';
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -17,14 +18,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={poppins.variable}>
-      {/*
-        `poppins.className` diterapkan langsung ke body (bukan hanya lewat
-        variabel CSS di <html>) supaya font-family Poppins pasti berlaku,
-        tidak bergantung pada Tailwind Preflight meneruskan `theme.fontFamily.sans`
-        dengan benar. Ini yang menyebabkan font sempat tampil sebagai serif
-        bawaan browser pada sebagian environment.
-      */}
-      <body className={poppins.className}>{children}</body>
+      <body className={poppins.className}>
+        <LanguageProvider>{children}</LanguageProvider>
+      </body>
     </html>
   );
 }

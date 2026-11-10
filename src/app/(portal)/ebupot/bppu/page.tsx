@@ -95,6 +95,28 @@ export default function BppuPage() {
   const preview = withheldByTaxObject(taxObjectName, gross);
   const cleanTin = tin.replace(/\D/g, '');
 
+  function handleTinChange(value: string) {
+    setTin(value);
+    const clean = value.replace(/\D/g, '');
+    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
+    if (person) {
+      setNama(person.nama);
+      if (!counterpartNitku) {
+        setCounterpartNitku(`${clean}000000`);
+      }
+    } else {
+      const entity = db.entities.find((e) => e.tin === clean);
+      if (entity) {
+        setNama(entity.name);
+        if (!counterpartNitku) {
+          setCounterpartNitku(entity.nitkuPusat || `${clean}000000`);
+        }
+      } else if (clean.length === 16) {
+        setNama('');
+      }
+    }
+  }
+
   if (!entityTin) {
     return (
       <p className="rounded-card bg-white p-5 text-sm shadow-card">
@@ -518,7 +540,7 @@ export default function BppuPage() {
               <div>
                 <label className="field-label" htmlFor="tin">TIN (NPWP16/NIK lawan transaksi)</label>
                 <input id="tin" className="field-input font-mono" maxLength={16} value={tin}
-                  onChange={(e) => setTin(e.target.value)} />
+                  onChange={(e) => handleTinChange(e.target.value)} />
               </div>
               <div>
                 <label className="field-label" htmlFor="nm">Name (otomatis bila TIN valid)</label>

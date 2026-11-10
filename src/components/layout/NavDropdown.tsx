@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDown } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 export interface NavSubItem {
   label: string;
@@ -18,6 +19,7 @@ export interface NavSubItem {
  */
 export function NavDropdown({ label, href, items }: { label: string; href: string; items: NavSubItem[] }) {
   const [open, setOpen] = useState(false);
+  const { lang, t } = useLanguage();
 
   return (
     <div className="relative">
@@ -56,10 +58,10 @@ export function NavDropdown({ label, href, items }: { label: string; href: strin
                 onClick={() => setOpen(false)}
                 className="flex items-center justify-between gap-2 px-3 py-2 text-[13px] hover:bg-brand-50"
               >
-                <span>{item.label}</span>
+                <span>{t(item.label, item.label)}</span>
                 {item.badge && (
                   <span className="shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-xxs font-medium text-brand-700">
-                    {item.badge}
+                    {item.badge === 'Segera' && lang === 'en' ? 'Soon' : item.badge}
                   </span>
                 )}
               </Link>

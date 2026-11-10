@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Search, ChevronDown, Building2, UserRound, Plus } from 'lucide-react';
 import type { TaxEntity } from '@/lib/domain/types';
+import { useLanguage } from '@/lib/i18n/LanguageContext';
 
 /**
  * Dropdown identitas di pojok kanan header, meniru slide 15-16 pada panduan:
@@ -29,6 +30,7 @@ export function IdentitySwitcher({
   onSelectEntity: (tin: string) => void;
   onAddEntity: (tin: string, name: string, address: string) => string | null;
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [addOpen, setAddOpen] = useState(false);
@@ -88,7 +90,7 @@ export function IdentitySwitcher({
                 <input
                   autoFocus
                   className="w-full text-[13px] outline-none"
-                  placeholder="Cari NPWP atau nama…"
+                  placeholder={t('id_switch.search_placeholder')}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                 />
@@ -97,7 +99,7 @@ export function IdentitySwitcher({
 
             <div className="max-h-80 overflow-y-auto py-1">
               <p className="px-3 pt-2 text-xxs font-semibold uppercase tracking-wide text-ink-muted">
-                Main Account
+                {t('id_switch.main_account')}
               </p>
               <button
                 onClick={() => pick(onSelectMain)}
@@ -110,11 +112,11 @@ export function IdentitySwitcher({
               </button>
 
               <p className="mt-2 px-3 pt-2 text-xxs font-semibold uppercase tracking-wide text-ink-muted">
-                Taxpayers
+                {t('id_switch.taxpayers')}
               </p>
               {filtered.length === 0 && (
                 <p className="px-3 py-2 text-[13px] text-ink-muted">
-                  {entities.length === 0 ? 'Belum ada Taxpayer terdaftar.' : 'Tidak ditemukan.'}
+                  {entities.length === 0 ? t('id_switch.no_taxpayer') : t('id_switch.not_found')}
                 </p>
               )}
               {filtered.map((e) => (
@@ -137,36 +139,36 @@ export function IdentitySwitcher({
                   onClick={() => setAddOpen(true)}
                   className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-[13px] text-brand-600 hover:bg-brand-50"
                 >
-                  <Plus size={14} /> Daftarkan Taxpayer baru
+                  <Plus size={14} /> {t('id_switch.register_new')}
                 </button>
               ) : (
                 <div className="space-y-1.5 p-1">
                   <input
                     className="field-input py-1.5 font-mono text-[13px]"
-                    placeholder="NPWP 16 digit"
+                    placeholder={t('id_switch.tin_placeholder')}
                     maxLength={16}
                     value={tin}
                     onChange={(e) => setTin(e.target.value)}
                   />
                   <input
                     className="field-input py-1.5 text-[13px]"
-                    placeholder="Nama badan/OP"
+                    placeholder={t('id_switch.name_placeholder')}
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                   />
                   <input
                     className="field-input py-1.5 text-[13px]"
-                    placeholder="Alamat"
+                    placeholder={t('id_switch.address_placeholder')}
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
                   />
                   {error && <p className="text-xxs text-bad">{error}</p>}
                   <div className="flex gap-1.5 pt-0.5">
                     <button className="btn-secondary flex-1 py-1.5 text-[13px]" onClick={() => setAddOpen(false)}>
-                      Batal
+                      {t('id_switch.cancel')}
                     </button>
                     <button className="btn-primary flex-1 py-1.5 text-[13px]" onClick={submitAdd}>
-                      Simpan
+                      {t('id_switch.save')}
                     </button>
                   </div>
                 </div>

@@ -189,12 +189,39 @@ export function ensureSeedData(db: Database, customUser?: { nik: string; name: s
     });
   }
 
+  const tku = db.tkus.find((t) => t.entityTin === SEED_ENTITY.tin && t.jenis === 'Pusat');
+  if (tku && !tku.picNiks.includes(mainNik)) {
+    tku.picNiks.push(mainNik);
+  }
+
+  if (!db.relatedParties.some((p) => p.entityTin === SEED_ENTITY.tin && p.personNik === mainNik)) {
+    db.relatedParties.push({
+      id: crypto.randomUUID(),
+      entityTin: SEED_ENTITY.tin,
+      kind: 'RELATED_PERSON',
+      role: 'WAKIL',
+      personNik: mainNik,
+      personName: mainName,
+      nationality: 'Indonesia',
+      countryOfOrigin: 'Indonesia',
+      email: `${mainNik.toLowerCase()}@student.uny.ac.id`,
+      phone: '+628****6789',
+      passportNumber: '',
+      sharePercentage: '',
+      beneficialOwnerCriteria: '',
+      isPic: true,
+      isExternalData: false,
+      validFrom: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+      validTo: null,
+    });
+  }
+
   // Alamat, email, dan nomor telepon di bawah ini tertulis eksplisit pada
   // slide Permohonan Sertifikat Digital sebagai contoh nilai yang "akan
   // terisi secara otomatis oleh sistem" — disemai di sini supaya formulir
   // itu langsung terisi penuh sejak kunjungan pertama, tanpa mahasiswa harus
   // mengetik alamat/kontak sendiri lebih dulu.
-  if (!db.mainAccountProfile || customUser) {
+  if (!db.mainAccountProfile) {
     db.mainAccountProfile = {
       nik: mainNik,
       nama: mainName,
@@ -203,6 +230,10 @@ export function ensureSeedData(db: Database, customUser?: { nik: string; name: s
       phone: '+628123456789',
       signingCredential: null,
     };
+  } else if (customUser) {
+    db.mainAccountProfile.nik = mainNik;
+    db.mainAccountProfile.nama = mainName;
+    db.mainAccountProfile.email = `${mainNik.toLowerCase()}@student.uny.ac.id`;
   }
 
   for (const person of PRACTICE_PERSON_SEEDS) {

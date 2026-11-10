@@ -10,6 +10,7 @@ import type { Database } from '@/lib/storage/db';
 import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
 import { BPPU_ARTICLE_LABEL } from '@/lib/domain/bppu';
 import { BupotAnnex } from '@/components/ui/BupotAnnex';
+import { downloadBillingPdf } from '@/lib/domain/billingPdf';
 
 /**
  * Halaman isi SPT Masa PPh Pasal 21/26. Lima tab dan susunan bagian mengikuti
@@ -31,47 +32,6 @@ type TabKey = 'UTAMA' | 'L-IA' | 'L-IB' | 'L-II' | 'L-III';
 const TABS: TabKey[] = ['UTAMA', 'L-IA', 'L-IB', 'L-II', 'L-III'];
 
 const rupiah = (n: number) => n.toLocaleString('id-ID');
-
-function downloadBillingPdf(billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string }) {
-  const content = `%PDF-1.4
-1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
-2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
-3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
-4 0 obj << /Length 260 >> stream
-BT
-/F1 18 Tf
-50 720 Td (CETAKAN KODE BILLING PAJAK) Tj
-/F1 12 Tf
-0 -30 Td (Kode Billing: ${billing.kodeBilling}) Tj
-0 -20 Td (KAP/KJS: ${billing.kapKjs}) Tj
-0 -20 Td (Masa Pajak: ${billing.masaPajak}) Tj
-0 -20 Td (Nominal: Rp ${billing.nominal.toLocaleString('id-ID')}) Tj
-0 -20 Td (Berlaku Hingga: ${new Date(billing.expiresAt).toLocaleDateString('id-ID')}) Tj
-ET
-endstream endobj
-5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
-xref
-0 6
-0000000000 65535 f 
-0000000010 00000 n 
-0000000060 00000 n 
-0000000117 00000 n 
-0000000244 00000 n 
-0000000555 00000 n 
-trailer << /Size 6 /Root 1 0 R >>
-startxref
-626
-%%EOF`;
-  const blob = new Blob([content], { type: 'application/pdf' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `billing-${billing.kodeBilling}.pdf`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 export default function SptEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -184,7 +144,18 @@ export default function SptEditorPage() {
     });
     setSigning(false);
     if (createdBilling) {
-      downloadBillingPdf(createdBilling);
+      downloadBillingPdf({
+        kodeBilling: createdBilling.kodeBilling,
+        kapKjs: createdBilling.kapKjs,
+        masaPajak: String(createdBilling.masaPajak).replace('-', ''),
+        nominal: createdBilling.nominal,
+        createdAt: createdBilling.createdAt,
+        expiresAt: createdBilling.expiresAt,
+        taxpayerTin: entity?.tin ?? spt?.entityTin,
+        taxpayerName: entity?.name ?? 'PT KARYA MANDIRI SEJAHTERA',
+        taxpayerAddress: entity?.address ?? 'Jl. Sudirman Kav. 25, Jakarta Pusat',
+        uraian: `Pembayaran PPh Pasal 21 Masa ${createdBilling.masaPajak}`,
+      });
     }
     setNotice(
       net > 0
@@ -288,7 +259,7 @@ export default function SptEditorPage() {
             </div>
 
             {spt.status === 'MENUNGGU_PEMBAYARAN' && spt.billing && (
-              <BillingCard billing={spt.billing} onPay={pay} disabled={!canSignSptRole} />
+              <BillingCard billing={spt.billing} entity={entity} onPay={pay} disabled={!canSignSptRole} />
             )}
 
             <Section title="D. Declaration and Signature">
@@ -533,10 +504,12 @@ function DeclarationForm({
 
 function BillingCard({
   billing,
+  entity,
   onPay,
   disabled,
 }: {
-  billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string };
+  billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string; createdAt?: string };
+  entity?: { tin: string; name: string; address: string } | null;
   onPay: () => void;
   disabled?: boolean;
 }) {
@@ -556,7 +529,23 @@ function BillingCard({
         <button className="btn-primary" onClick={onPay} disabled={disabled}>
           Simulasikan Pembayaran
         </button>
-        <button className="btn-secondary" onClick={() => downloadBillingPdf(billing)}>
+        <button
+          className="btn-secondary"
+          onClick={() =>
+            downloadBillingPdf({
+              kodeBilling: billing.kodeBilling,
+              kapKjs: billing.kapKjs,
+              masaPajak: String(billing.masaPajak).replace('-', ''),
+              nominal: billing.nominal,
+              createdAt: billing.createdAt || new Date().toISOString(),
+              expiresAt: billing.expiresAt,
+              taxpayerTin: entity?.tin ?? '0012345678910000',
+              taxpayerName: entity?.name ?? 'PT KARYA MANDIRI SEJAHTERA',
+              taxpayerAddress: entity?.address ?? 'Jl. Sudirman Kav. 25, Jakarta Pusat',
+              uraian: `Pembayaran PPh Pasal 21 Masa ${billing.masaPajak}`,
+            })
+          }
+        >
           Unduh Billing (PDF)
         </button>
       </div>
@@ -1015,7 +1004,7 @@ function UnifikasiSptView({
             </div>
 
             {spt.status === 'MENUNGGU_PEMBAYARAN' && spt.billing && (
-              <BillingCard billing={spt.billing} onPay={pay} disabled={!canSignSptRole} />
+              <BillingCard billing={spt.billing} entity={entity} onPay={pay} disabled={!canSignSptRole} />
             )}
           </div>
         )}
