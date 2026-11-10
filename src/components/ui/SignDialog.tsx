@@ -29,15 +29,18 @@ const PROVIDER_LABEL: Record<CertificateProvider, string> = {
 export function SignDialog({
   signerNik,
   credential,
+  requireSave = false,
   onCancel,
   onConfirm,
 }: {
   signerNik: string;
   credential: SigningCredential | null;
+  requireSave?: boolean;
   onCancel: () => void;
   onConfirm: (password: string, provider: CertificateProvider) => void;
 }) {
   const [pass, setPass] = useState('');
+  const [saved, setSaved] = useState(!requireSave);
   const [error, setError] = useState<string | null>(null);
 
   if (!credential) {
@@ -97,7 +100,12 @@ export function SignDialog({
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button className="btn-secondary" onClick={onCancel}>Batal</button>
-          <button className="btn-primary" onClick={confirm} disabled={!pass}>
+          {requireSave && !saved && (
+            <button className="btn-secondary" onClick={() => setSaved(true)} disabled={!pass}>
+              Simpan
+            </button>
+          )}
+          <button className="btn-primary" onClick={confirm} disabled={!pass || (requireSave && !saved)}>
             Konfirmasi Tanda Tangan
           </button>
         </div>

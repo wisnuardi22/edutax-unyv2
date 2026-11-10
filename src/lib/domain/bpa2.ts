@@ -125,7 +125,7 @@ export function calculateBpa2(input: {
   const netIncome = totalGross - biayaJabatan(totalGross, input.months);
   const totalNetIncomeForCalc = netIncome + input.netIncomeFromPrevious;
   const taxExemption = PTKP_AMOUNTS[input.ptkp] ?? PTKP_AMOUNTS['TK/0'];
-  const taxableIncome = Math.max(0, totalNetIncomeForCalc - taxExemption);
+  const taxableIncome = Math.floor(Math.max(0, totalNetIncomeForCalc - taxExemption) / 1000) * 1000;
   const article21TaxOnTaxableIncome = progressiveTax(taxableIncome);
   const article21TaxLiability = article21TaxOnTaxableIncome;
   const article21TaxLiabilityInThisSlip = article21TaxLiability - input.article21TaxWithheldFromPrevious;
@@ -145,4 +145,14 @@ export function calculateBpa2(input: {
     article21TaxWithheld: input.article21TaxWithheld,
     underOverPayment,
   };
+}
+
+export function previouslyWithheld(doc: any): number {
+  if (doc?.fields?.taxWithheld !== undefined) {
+    return Number(doc.fields.taxWithheld);
+  }
+  if (doc?.fields?.underOverPayment !== undefined && doc?.withheld !== undefined) {
+    return Number(doc.withheld) - Number(doc.fields.underOverPayment);
+  }
+  return Number(doc?.withheld ?? 0);
 }

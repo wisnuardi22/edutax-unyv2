@@ -184,8 +184,28 @@ export function downloadExcelTemplate(filename: string, sheetName: string, heade
 export function parseSpreadsheetXml(text: string): string[][] {
   const doc = new DOMParser().parseFromString(text, 'application/xml');
   if (doc.querySelector('parsererror')) return [];
-  const rows = Array.from(doc.getElementsByTagName('Row'));
-  return rows.map((r) =>
-    Array.from(r.getElementsByTagName('Cell')).map((c) => c.getElementsByTagName('Data')[0]?.textContent ?? ''),
-  );
+  const rows = Array.from(doc.getElementsByTagNameNS('*', 'Row'));
+  return rows.map((r) => {
+    const cells = Array.from(r.getElementsByTagNameNS('*', 'Cell'));
+    const result: string[] = [];
+    let curIdx = 0;
+    for (const c of cells) {
+      const idxAttr =
+        c.getAttributeNS('urn:schemas-microsoft-com:office:spreadsheet', 'Index') ||
+        c.getAttribute('ss:Index') ||
+        c.getAttribute('Index');
+      if (idxAttr) {
+        const targetIdx = parseInt(idxAttr, 10) - 1;
+        while (result.length < targetIdx) {
+          result.push('');
+        }
+        curIdx = targetIdx;
+      }
+      const dataEl = c.getElementsByTagNameNS('*', 'Data')[0];
+      const val = dataEl?.textContent ?? '';
+      result[curIdx] = val;
+      curIdx++;
+    }
+    return result;
+  });
 }

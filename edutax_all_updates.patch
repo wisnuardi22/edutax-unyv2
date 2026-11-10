@@ -1,0 +1,1852 @@
+diff --git a/package-lock.json b/package-lock.json
+index 2546408..e064e3d 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -14,13 +14,14 @@
+         "react-dom": "19.0.0"
+       },
+       "devDependencies": {
+-        "@types/node": "^22",
+-        "@types/react": "^19",
++        "@playwright/test": "^1.65.0",
++        "@types/node": "^22.20.5",
++        "@types/react": "^19.3.0",
+         "@types/react-dom": "^19",
+         "autoprefixer": "^10.4.20",
+         "postcss": "^8.4.49",
+         "tailwindcss": "^3.4.15",
+-        "typescript": "^5.6.3"
++        "typescript": "^5.9.3"
+       }
+     },
+     "node_modules/@alloc/quick-lru": {
+@@ -818,6 +819,22 @@
+         "node": ">= 8"
+       }
+     },
++    "node_modules/@playwright/test": {
++      "version": "1.65.0",
++      "resolved": "https://registry.npmjs.org/@playwright/test/-/test-1.65.0.tgz",
++      "integrity": "sha512-iGURLGuKDLakSEl7Pgfv8h7f+XLT+V861Wfhz0zlEl5nyFuKUopdkFBPKqTllTUp06aOwPuH8iuUEb3yp3MpbQ==",
++      "devOptional": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "playwright": "1.65.0"
++      },
++      "bin": {
++        "playwright": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      }
++    },
+     "node_modules/@swc/helpers": {
+       "version": "0.5.23",
+       "resolved": "https://registry.npmjs.org/@swc/helpers/-/helpers-0.5.23.tgz",
+@@ -828,9 +845,9 @@
+       }
+     },
+     "node_modules/@types/node": {
+-      "version": "22.20.3",
+-      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.20.3.tgz",
+-      "integrity": "sha512-DZmzkmwHzXrLPAXPyKNDzlIwMMUZCVacoD25ywdy5YTKGbOx/2ld+Q38Im2zJ0vBuZP5Prd3VZutKZyXwkOS8A==",
++      "version": "22.20.5",
++      "resolved": "https://registry.npmjs.org/@types/node/-/node-22.20.5.tgz",
++      "integrity": "sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -1579,6 +1596,35 @@
+         "node": ">= 6"
+       }
+     },
++    "node_modules/playwright": {
++      "version": "1.65.0",
++      "resolved": "https://registry.npmjs.org/playwright/-/playwright-1.65.0.tgz",
++      "integrity": "sha512-F3AMWcR44qMBt4kq+6Kb6mX7bjGXshktKFOPULd7reED6ZJWevjbNRqysP7q+AATE9kdPEZBibex1BYsvpVoeA==",
++      "devOptional": true,
++      "license": "Apache-2.0",
++      "dependencies": {
++        "playwright-core": "1.65.0"
++      },
++      "bin": {
++        "playwright": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      }
++    },
++    "node_modules/playwright-core": {
++      "version": "1.65.0",
++      "resolved": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.65.0.tgz",
++      "integrity": "sha512-vNSKgH6YqtN7cdT/L334zo0a+YwkrpicyrHJlWWPIm/Q+Nn2SWInil01oT0mbu96U4GgoRtCYQD9CzJQgju+lA==",
++      "devOptional": true,
++      "license": "Apache-2.0",
++      "bin": {
++        "playwright-core": "cli.js"
++      },
++      "engines": {
++        "node": ">=20"
++      }
++    },
+     "node_modules/postcss": {
+       "version": "8.5.28",
+       "resolved": "https://registry.npmjs.org/postcss/-/postcss-8.5.28.tgz",
+diff --git a/package.json b/package.json
+index 24ff272..2df4acf 100644
+--- a/package.json
++++ b/package.json
+@@ -16,12 +16,13 @@
+     "react-dom": "19.0.0"
+   },
+   "devDependencies": {
+-    "@types/node": "^22",
+-    "@types/react": "^19",
++    "@playwright/test": "^1.65.0",
++    "@types/node": "^22.20.5",
++    "@types/react": "^19.3.0",
+     "@types/react-dom": "^19",
+     "autoprefixer": "^10.4.20",
+     "postcss": "^8.4.49",
+     "tailwindcss": "^3.4.15",
+-    "typescript": "^5.6.3"
++    "typescript": "^5.9.3"
+   }
+ }
+diff --git a/playwright.config.cjs b/playwright.config.cjs
+index 51e7504..25f8681 100644
+--- a/playwright.config.cjs
++++ b/playwright.config.cjs
+@@ -1,2 +1,2 @@
+ ﻿const { defineConfig } = require('@playwright/test');
+-module.exports = defineConfig({ testDir: './tests/browser', timeout: 90000, workers: 1, use: { baseURL: process.env.TEST_BASE_URL || 'http://localhost:3001', browserName:'chromium', channel:'msedge', headless:true, viewport:{width:1440,height:1000}, screenshot:'only-on-failure' } });
++module.exports = defineConfig({ testDir: './tests/browser', timeout: 90000, workers: 1, use: { baseURL: process.env.TEST_BASE_URL || 'http://localhost:3005', browserName:'chromium', channel:'chrome', headless:true, viewport:{width:1440,height:1000}, screenshot:'only-on-failure' } });
+diff --git a/src/app/(portal)/ebupot/bpa2/page.tsx b/src/app/(portal)/ebupot/bpa2/page.tsx
+index 7b97658..6a1fd80 100644
+--- a/src/app/(portal)/ebupot/bpa2/page.tsx
++++ b/src/app/(portal)/ebupot/bpa2/page.tsx
+@@ -5,13 +5,14 @@ import { useDb } from '@/lib/storage/useDb';
+ import { nextWithholdingNumber } from '@/lib/storage/db';
+ import {
+   BPA2_TAX_OBJECT, GENDER_OPTIONS, PTKP_AMOUNTS, STATUS_WITHHOLDING_OPTIONS,
+-  calculateBpa2, monthsBetween, type GrossIncomeInput,
++  calculateBpa2, monthsBetween, previouslyWithheld, type GrossIncomeInput,
+ } from '@/lib/domain/bpa2';
+ import { tabOf, type BupotDoc, type CertificateProvider, type DocTab } from '@/lib/domain/types';
+ import { SignDialog } from '@/components/ui/SignDialog';
+ import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
+ import { ExportIconRow } from '@/components/ui/ExportIconRow';
+ import { downloadCsv, downloadXls, printAsPdf } from '@/lib/storage/csv';
++import { validateBupot } from '@/lib/domain/bupotValidation';
+ import { Pencil } from 'lucide-react';
+ 
+ /**
+@@ -92,6 +93,8 @@ export default function Bpa2Page() {
+   const [netIncomeFromPrevious, setNetIncomeFromPrevious] = useState(0);
+   const [withheldFromPrevious, setWithheldFromPrevious] = useState(0);
+   const [taxWithheld, setTaxWithheld] = useState(0);
++  const [validationError, setValidationError] = useState<string | null>(null);
++  const [getDataError, setGetDataError] = useState<string | null>(null);
+ 
+   const cleanTin = tin.replace(/\D/g, '');
+   const matchedPerson = db.persons.find((p) => p.nik === cleanTin || p.npwp16 === cleanTin);
+@@ -165,6 +168,8 @@ export default function Bpa2Page() {
+     setGross(emptyGross);
+     setPreviousSlipNumber(''); setNetIncomeFromPrevious(0); setWithheldFromPrevious(0); setTaxWithheld(0);
+     setNitku(tkus[0]?.nitku ?? '');
++    setValidationError(null);
++    setGetDataError(null);
+   }
+ 
+   function openCreate() { resetForm(); setFormOpen(true); }
+@@ -175,7 +180,7 @@ export default function Bpa2Page() {
+     setWorkingForSecondEmployer(Boolean(doc.fields.workingForSecondEmployer));
+     setStartMonth(Number(doc.fields.startMonth ?? doc.taxPeriodMonth)); setStartYear(Number(doc.fields.startYear ?? doc.taxPeriodYear));
+     setEndMonth(doc.taxPeriodMonth); setEndYear(doc.taxPeriodYear);
+-    setTin(doc.counterpartTin === NIK_TIDAK_PADAN ? '' : doc.counterpartTin);
++    setTin(doc.fields?.originalTin ? String(doc.fields.originalTin) : (doc.counterpartTin === NIK_TIDAK_PADAN ? '' : doc.counterpartTin));
+     setNama(doc.counterpartName);
+     setNip(String(doc.fields.nip ?? ''));
+     setGender(String(doc.fields.gender ?? GENDER_OPTIONS[0]));
+@@ -187,23 +192,100 @@ export default function Bpa2Page() {
+     setPreviousSlipNumber(String(doc.fields.previousSlipNumber ?? ''));
+     setNetIncomeFromPrevious(Number(doc.fields.netIncomeFromPrevious ?? 0));
+     setWithheldFromPrevious(Number(doc.fields.withheldFromPrevious ?? 0));
+-    setTaxWithheld(doc.withheld);
++    setTaxWithheld(previouslyWithheld(doc));
+     setNitku(doc.idPlaceOfBusinessActivity);
++    setValidationError(null);
++    setGetDataError(null);
+     setFormOpen(true);
+   }
+ 
+-  function resolveCounterpart(rawTin: string, fallbackName: string) {
+-    const clean = rawTin.replace(/\D/g, '');
+-    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
+-    const resolvedTin = clean && (!person || person.padan) ? clean : NIK_TIDAK_PADAN;
+-    return { resolvedTin, name: person?.nama ?? fallbackName };
++  function handleGetData() {
++    setGetDataError(null);
++    if (!previousSlipNumber.trim()) {
++      setGetDataError('Slip tidak ditemukan');
++      return;
++    }
++    const target = previousSlipNumber.trim();
++    const slip = db.bupots.find(
++      (b) =>
++        (b.kind === 'BPA1' || b.kind === 'BPA2') &&
++        b.status === 'ISSUED' &&
++        (b.withholdingNumber === target || b.id === target),
++    );
++
++    const userNik = db.session?.personNik;
++    const hasAccess =
++      slip &&
++      (db.relatedParties.some((p) => p.entityTin === slip.entityTin && p.personNik === userNik) ||
++        db.roleAssignments.some((a) => a.entityTin === slip.entityTin && a.personNik === userNik));
++
++    if (!slip || !hasAccess) {
++      setGetDataError('Slip tidak ditemukan');
++      return;
++    }
++
++    setNetIncomeFromPrevious(Number(slip.fields?.netIncome ?? slip.gross));
++    setWithheldFromPrevious(Number(slip.withheld ?? 0));
+   }
+ 
+   function saveDraft(submit: boolean) {
+     if (!canDraftBpa2) { setNotice(explainDenied('draft', 'BPA2')); return; }
+-    const { resolvedTin, name } = resolveCounterpart(tin, nama);
++    setValidationError(null);
++
++    let resolvedTin = cleanTin;
++    let originalTin: string | undefined = undefined;
++
++    if (cleanTin.length === 16 && (!matchedPerson || !matchedPerson.padan)) {
++      const ok = window.confirm(
++        `NIK ${cleanTin} tidak terdaftar pada data kependudukan atau belum padan. Apakah ingin melanjutkan dengan nomor pengganti ${NIK_TIDAK_PADAN}?`,
++      );
++      if (!ok) return;
++      resolvedTin = NIK_TIDAK_PADAN;
++      originalTin = cleanTin;
++    }
++
++    const recipientName = matchedPerson?.nama || nama.trim() || (resolvedTin === NIK_TIDAK_PADAN ? `PENERIMA PENGHASILAN#${originalTin}` : '');
+     const chosenNitku = nitku || tkus[0]?.nitku || `${entityTin}000000`;
+ 
++    if (submit) {
++      const err = validateBupot(
++        {
++          kind: 'BPA2',
++          counterpartTin: resolvedTin,
++          counterpartName: recipientName,
++          taxPeriodMonth: endMonth,
++          taxPeriodYear: endYear,
++          gross: calc.totalGross,
++          withheld: calc.article21TaxLiabilityInThisSlip,
++          idPlaceOfBusinessActivity: chosenNitku,
++          fields: {
++            ptkp,
++            startMonth,
++            startYear,
++            nip,
++            golongan,
++            jabatan,
++            statusWithholding,
++            grossIncome: gross,
++            taxWithheld,
++            netIncomeFromPrevious,
++            withheldFromPrevious,
++            lastPeriodGross: Number(gross.salaryPensionThtJht ?? 0),
++          },
++        },
++        tkus.map((t) => t.nitku),
++      );
++      if (err) {
++        setValidationError(err);
++        return;
++      }
++    }
++
++    const existingDoc = editingId ? db.bupots.find((b) => b.id === editingId) : undefined;
++    const finalLastPeriodGross = existingDoc?.fields?.lastPeriodGross !== undefined
++      ? Number(existingDoc.fields.lastPeriodGross)
++      : (gross.salaryPensionThtJht || 10000000);
++
+     mutate((d) => {
+       const fields = {
+         workingForSecondEmployer,
+@@ -214,10 +296,13 @@ export default function Bpa2Page() {
+         previousSlipNumber,
+         netIncomeFromPrevious,
+         withheldFromPrevious,
++        taxWithheld,
++        lastPeriodGross: finalLastPeriodGross,
+         netIncome: calc.netIncome,
+         taxableIncome: calc.taxableIncome,
+         taxLiability: calc.article21TaxLiability,
+         underOverPayment: calc.underOverPayment,
++        originalTin,
+       };
+       const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
+       if (existing) {
+@@ -229,7 +314,7 @@ export default function Bpa2Page() {
+           taxPeriodMonth: endMonth,
+           taxPeriodYear: endYear,
+           counterpartTin: resolvedTin,
+-          counterpartName: name,
++          counterpartName: recipientName,
+           taxObjectCode: BPA2_TAX_OBJECT.code,
+           gross: calc.totalGross,
+           rate: 0,
+@@ -247,7 +332,7 @@ export default function Bpa2Page() {
+           taxPeriodMonth: endMonth,
+           taxPeriodYear: endYear,
+           counterpartTin: resolvedTin,
+-          counterpartName: name,
++          counterpartName: recipientName,
+           taxObjectCode: BPA2_TAX_OBJECT.code,
+           gross: calc.totalGross,
+           rate: 0,
+@@ -430,7 +515,7 @@ export default function Bpa2Page() {
+                   <td className="text-xxs">{r.status}</td>
+                   <td>
+                     <div className="flex gap-2">
+-                      {tab === 'BELUM_TERBIT' && r.status === 'DRAFT' && canDraftBpa2 && (
++                      {tab === 'BELUM_TERBIT' && (r.status === 'DRAFT' || r.status === 'SUBMITTED') && canDraftBpa2 && (
+                         <button className="text-brand-600 hover:text-brand-800" title="Edit" onClick={() => openEdit(r)}>
+                           <Pencil size={15} />
+                         </button>
+@@ -575,10 +660,13 @@ export default function Bpa2Page() {
+                 <label className="field-label" htmlFor="psn">Previous Withholding Slip BPA1/BPA2 Number from Previous Employer (If any)</label>
+                 <div className="flex gap-1">
+                   <input id="psn" className="field-input" value={previousSlipNumber} onChange={(e) => setPreviousSlipNumber(e.target.value)} />
+-                  <button type="button" className="btn-secondary shrink-0" title="Belum ada registry lintas pemberi kerja di simulator ini — isi manual di kolom sebelah">
++                  <button type="button" className="btn-secondary shrink-0" onClick={handleGetData}>
+                     Get data
+                   </button>
+                 </div>
++                {getDataError && (
++                  <p role="alert" className="mt-1 text-xxs font-medium text-bad">{getDataError}</p>
++                )}
+               </div>
+               <div>
+                 <label className="field-label" htmlFor="nifp">Net Income from Previous Withholding Slip (Rp)</label>
+@@ -645,6 +733,12 @@ export default function Bpa2Page() {
+               </div>
+             </div>
+ 
++            {validationError && (
++              <p role="alert" className="mt-3 rounded bg-bad/10 p-2 text-xxs font-medium text-bad">
++                {validationError}
++              </p>
++            )}
++
+             <div className="mt-5 flex justify-end gap-2">
+               <button className="btn-secondary" onClick={() => setFormOpen(false)}>Tutup</button>
+               <button className="btn-secondary" onClick={() => saveDraft(false)}>Save Draft</button>
+diff --git a/src/app/(portal)/ebupot/bpmp/page.tsx b/src/app/(portal)/ebupot/bpmp/page.tsx
+index 76226e8..900d39e 100644
+--- a/src/app/(portal)/ebupot/bpmp/page.tsx
++++ b/src/app/(portal)/ebupot/bpmp/page.tsx
+@@ -12,6 +12,7 @@ import { ExportIconRow } from '@/components/ui/ExportIconRow';
+ import {
+   csvRowsToRecords, downloadCsv, downloadExcelTemplate, downloadXls, parseSpreadsheetXml, pickCsvFile, printAsPdf,
+ } from '@/lib/storage/csv';
++import { parseWithholdingDate } from '@/lib/domain/bupotValidation';
+ import { Pencil } from 'lucide-react';
+ 
+ /**
+@@ -177,6 +178,10 @@ export default function BpmpPage() {
+     const chosenNitku = nitku || tkus[0]?.nitku || `${entityTin}000000`;
+ 
+     mutate((d) => {
++      const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
++      const finalTaxObjectCode = existing?.taxObjectCode && existing.fields?.taxObjectName === taxObjectName
++        ? existing.taxObjectCode
++        : taxObjectCode;
+       const fields = {
+         ptkp,
+         jabatan,
+@@ -184,8 +189,8 @@ export default function BpmpPage() {
+         passportNumber: foreignEmployee ? passportNumber : undefined,
+         taxCertificate,
+         taxObjectName,
++        withholdingDate: existing?.fields?.withholdingDate,
+       };
+-      const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
+       if (existing) {
+         Object.assign(existing, {
+           status: submit ? 'SUBMITTED' : 'DRAFT',
+@@ -193,7 +198,7 @@ export default function BpmpPage() {
+           taxPeriodYear: year,
+           counterpartTin: resolvedTin,
+           counterpartName: name,
+-          taxObjectCode,
++          taxObjectCode: finalTaxObjectCode,
+           gross,
+           rate: preview.rate,
+           withheld: preview.withheld,
+@@ -324,6 +329,8 @@ export default function BpmpPage() {
+ 
+           const { resolvedTin, name } = resolveCounterpart(rec.CounterpartTin, '(tanpa nama)');
+           const { withheld, rate } = withheldByTer(rec.StatusTaxExemption || 'K/0', g);
++          const parsedDate = rec.WithholdingDate ? parseWithholdingDate(rec.WithholdingDate) : null;
++          const targetObj = BPMP_TAX_OBJECTS.find((o) => o.code === rec.TaxObjectCode) ?? BPMP_TAX_OBJECTS[0];
+           d.bupots.push({
+             id: crypto.randomUUID(),
+             kind: 'BPMP',
+@@ -349,7 +356,8 @@ export default function BpmpPage() {
+               foreignEmployee: isForeign,
+               passportNumber: isForeign ? rec.CounterpartPassport : undefined,
+               taxCertificate: rec.TaxCertificate || BPMP_TAX_CERTIFICATE_OPTIONS[0],
+-              taxObjectName: BPMP_TAX_OBJECTS[0].name,
++              taxObjectName: targetObj.name,
++              withholdingDate: parsedDate ?? undefined,
+             },
+           });
+           created++;
+@@ -487,7 +495,7 @@ export default function BpmpPage() {
+                   <td className="font-mono text-xxs">{r.idPlaceOfBusinessActivity}</td>
+                   <td>
+                     <div className="flex gap-2">
+-                      {tab === 'BELUM_TERBIT' && r.status === 'DRAFT' && canDraftBpmp && (
++                      {tab === 'BELUM_TERBIT' && (r.status === 'DRAFT' || r.status === 'SUBMITTED') && canDraftBpmp && (
+                         <button className="text-brand-600 hover:text-brand-800" title="Edit" onClick={() => openEdit(r)}>
+                           <Pencil size={15} />
+                         </button>
+diff --git a/src/app/(portal)/layout.tsx b/src/app/(portal)/layout.tsx
+index f2f8b55..bf562f0 100644
+--- a/src/app/(portal)/layout.tsx
++++ b/src/app/(portal)/layout.tsx
+@@ -1,6 +1,6 @@
+ 'use client';
+ 
+-import { useEffect } from 'react';
++import { useEffect, useState } from 'react';
+ import { useRouter } from 'next/navigation';
+ import { AppShell } from '@/components/layout/AppShell';
+ import { useDb } from '@/lib/storage/useDb';
+@@ -8,11 +8,16 @@ import { useDb } from '@/lib/storage/useDb';
+ export default function PortalLayout({ children }: { children: React.ReactNode }) {
+   const router = useRouter();
+   const { db } = useDb();
++  const [mounted, setMounted] = useState(false);
+ 
+   useEffect(() => {
+-    if (!db.session) router.replace('/login');
+-  }, [db.session, router]);
++    setMounted(true);
++  }, []);
+ 
+-  if (!db.session) return null;
++  useEffect(() => {
++    if (mounted && !db.session) router.replace('/login');
++  }, [mounted, db.session, router]);
++
++  if (!mounted || !db.session) return null;
+   return <AppShell>{children}</AppShell>;
+ }
+diff --git a/src/app/(portal)/spt/[id]/page.tsx b/src/app/(portal)/spt/[id]/page.tsx
+index 2de42be..8ceef80 100644
+--- a/src/app/(portal)/spt/[id]/page.tsx
++++ b/src/app/(portal)/spt/[id]/page.tsx
+@@ -9,6 +9,7 @@ import type { CertificateProvider, DaftarIISetorSendiriRow, SptDoc, SptManualRow
+ import type { Database } from '@/lib/storage/db';
+ import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
+ import { BPPU_ARTICLE_LABEL } from '@/lib/domain/bppu';
++import { BupotAnnex } from '@/components/ui/BupotAnnex';
+ 
+ /**
+  * Halaman isi SPT Masa PPh Pasal 21/26. Lima tab dan susunan bagian mengikuti
+@@ -31,6 +32,47 @@ const TABS: TabKey[] = ['UTAMA', 'L-IA', 'L-IB', 'L-II', 'L-III'];
+ 
+ const rupiah = (n: number) => n.toLocaleString('id-ID');
+ 
++function downloadBillingPdf(billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string }) {
++  const content = `%PDF-1.4
++1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
++2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
++3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
++4 0 obj << /Length 260 >> stream
++BT
++/F1 18 Tf
++50 720 Td (CETAKAN KODE BILLING PAJAK) Tj
++/F1 12 Tf
++0 -30 Td (Kode Billing: ${billing.kodeBilling}) Tj
++0 -20 Td (KAP/KJS: ${billing.kapKjs}) Tj
++0 -20 Td (Masa Pajak: ${billing.masaPajak}) Tj
++0 -20 Td (Nominal: Rp ${billing.nominal.toLocaleString('id-ID')}) Tj
++0 -20 Td (Berlaku Hingga: ${new Date(billing.expiresAt).toLocaleDateString('id-ID')}) Tj
++ET
++endstream endobj
++5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
++xref
++0 6
++0000000000 65535 f 
++0000000010 00000 n 
++0000000060 00000 n 
++0000000117 00000 n 
++0000000244 00000 n 
++0000000555 00000 n 
++trailer << /Size 6 /Root 1 0 R >>
++startxref
++626
++%%EOF`;
++  const blob = new Blob([content], { type: 'application/pdf' });
++  const url = URL.createObjectURL(blob);
++  const a = document.createElement('a');
++  a.href = url;
++  a.download = `billing-${billing.kodeBilling}.pdf`;
++  document.body.appendChild(a);
++  a.click();
++  document.body.removeChild(a);
++  setTimeout(() => URL.revokeObjectURL(url), 1000);
++}
++
+ export default function SptEditorPage() {
+   const { id } = useParams<{ id: string }>();
+   const router = useRouter();
+@@ -106,10 +148,22 @@ export default function SptEditorPage() {
+ 
+   function submit(password: string, provider: CertificateProvider) {
+     if (!password || !canSignSptRole) return;
++    let createdBilling: any = null;
+     mutate((d) => {
+       const s = d.spts.find((x) => x.id === id);
+       if (!s) return;
+       s.signature = { provider, signerNik: d.session!.personNik, signedAt: new Date().toISOString() };
++      const relevant = d.bupots.filter(
++        (b) =>
++          b.entityTin === s.entityTin &&
++          b.status === 'ISSUED' &&
++          b.taxPeriodYear === s.taxPeriodYear &&
++          (b.taxPeriodMonth === s.taxPeriodMonth || (b.kind === 'BPA2' && b.taxPeriodMonth === s.taxPeriodMonth)),
++      );
++      (s as any).snapshot = {
++        bupots: relevant,
++        reportedAt: new Date().toISOString(),
++      };
+       if (net > 0) {
+         s.status = 'MENUNGGU_PEMBAYARAN';
+         const created = new Date();
+@@ -122,12 +176,16 @@ export default function SptEditorPage() {
+           createdAt: created.toISOString(),
+           expiresAt: expires.toISOString(),
+         };
++        createdBilling = s.billing;
+       } else {
+         s.status = 'DILAPORKAN';
+         s.submittedAt = new Date().toISOString();
+       }
+     });
+     setSigning(false);
++    if (createdBilling) {
++      downloadBillingPdf(createdBilling);
++    }
+     setNotice(
+       net > 0
+         ? 'Dokumen berhasil ditandatangani. Kode billing telah terbit — selesaikan pembayaran pada tab SPT Menunggu Pembayaran.'
+@@ -286,32 +344,46 @@ export default function SptEditorPage() {
+         )}
+ 
+         {tab === 'L-IB' && (
+-          <>
+-            {!isLastPeriod && (
+-              <p className="mt-4 rounded-md border border-line bg-canvas px-3 py-2 text-[13px] text-ink-muted">
+-                Lampiran ini hanya diisi untuk SPT Masa pajak terakhir (Desember).
+-              </p>
++          <BupotAnnex
++            title="Daftar Pemotongan PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan untuk Masa Pajak Terakhir"
++            rows={bupots.filter(
++              (b) =>
++                b.entityTin === spt.entityTin &&
++                b.status === 'ISSUED' &&
++                (b.kind === 'BPA1' || b.kind === 'BPA2') &&
++                b.taxPeriodMonth === spt.taxPeriodMonth &&
++                b.taxPeriodYear === spt.taxPeriodYear,
+             )}
+-            <LampiranBulanan
+-              judul="Daftar Pemotongan PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan untuk Masa Pajak Terakhir"
+-              entityTin={spt.entityTin}
+-              month={spt.taxPeriodMonth}
+-              year={spt.taxPeriodYear}
+-              rows={isLastPeriod ? bpmpRows : []}
+-            />
+-          </>
++            lastPeriod={true}
++            all={bupots}
++          />
+         )}
+ 
+         {tab === 'L-II' && (
+-          <LampiranTahunan entityTin={spt.entityTin} year={spt.taxPeriodYear} bupots={bupots} />
++          <BupotAnnex
++            title="Daftar Pemotongan Satu Tahun Pajak PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan"
++            rows={bupots.filter(
++              (b) =>
++                b.entityTin === spt.entityTin &&
++                b.status === 'ISSUED' &&
++                (b.kind === 'BPA1' || b.kind === 'BPA2') &&
++                b.taxPeriodYear === spt.taxPeriodYear,
++            )}
++            annual={true}
++          />
+         )}
+ 
+         {tab === 'L-III' && (
+-          <LampiranSelainPegawaiTetap
+-            entityTin={spt.entityTin}
+-            month={spt.taxPeriodMonth}
+-            year={spt.taxPeriodYear}
+-            bupots={bupots}
++          <BupotAnnex
++            title="Daftar Pemotongan PPh Pasal 21/26 Selain Pegawai Tetap"
++            rows={bupots.filter(
++              (b) =>
++                b.entityTin === spt.entityTin &&
++                b.status === 'ISSUED' &&
++                (b.kind === 'BP21' || b.kind === 'BP26') &&
++                b.taxPeriodMonth === spt.taxPeriodMonth &&
++                b.taxPeriodYear === spt.taxPeriodYear,
++            )}
+           />
+         )}
+       </section>
+@@ -320,6 +392,7 @@ export default function SptEditorPage() {
+         <SignDialog
+           signerNik={db.session!.personNik}
+           credential={db.mainAccountProfile?.signingCredential ?? null}
++          requireSave={true}
+           onCancel={() => setSigning(false)}
+           onConfirm={submit}
+         />
+@@ -479,9 +552,14 @@ function BillingCard({
+       <p className="mt-1 text-xxs text-ink-muted">
+         Berlaku sampai {new Date(billing.expiresAt).toLocaleString('id-ID')}
+       </p>
+-      <button className="btn-primary mt-3" onClick={onPay} disabled={disabled}>
+-        Simulasikan Pembayaran
+-      </button>
++      <div className="mt-3 flex flex-wrap gap-2">
++        <button className="btn-primary" onClick={onPay} disabled={disabled}>
++          Simulasikan Pembayaran
++        </button>
++        <button className="btn-secondary" onClick={() => downloadBillingPdf(billing)}>
++          Unduh Billing (PDF)
++        </button>
++      </div>
+       <p className="mt-1 text-xxs text-ink-muted">
+         Di Coretax, pembayaran nyata dilakukan lewat bank/pos dan status berubah otomatis tanpa input NTPN.
+         Tombol ini menyingkat langkah tersebut untuk keperluan praktikum.
+diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+index d1e8df6..48b0287 100644
+--- a/src/app/login/page.tsx
++++ b/src/app/login/page.tsx
+@@ -5,11 +5,8 @@ import Image from 'next/image';
+ import { useRouter } from 'next/navigation';
+ import { Eye, EyeOff, RefreshCw, Info } from 'lucide-react';
+ import { addAuditEvent, loadDb, updateDb } from '@/lib/storage/db';
+-import { ensureSeedData, MAIN_ACCOUNT_SEED } from '@/lib/domain/portal';
+-
+-/** Akun bersama satu kelas. Sengaja ditampilkan di layar sesuai brief. */
+-const DEMO_USER = 'edutax';
+-const DEMO_PASS = 'edutax2026';
++import { ensureSeedData } from '@/lib/domain/portal';
++import { findStudentByNim } from '@/lib/domain/students';
+ 
+ function makeCaptcha() {
+   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+@@ -38,20 +35,30 @@ export default function LoginPage() {
+       refreshCaptcha();
+       return;
+     }
+-    if (userId.trim() !== DEMO_USER || password !== DEMO_PASS) {
+-      setError('ID Pengguna atau Kata Sandi tidak sesuai.');
++
++    const cleanInput = userId.trim();
++    const student = findStudentByNim(cleanInput);
++
++    // Boleh login jika NIM terdaftar di daftar mahasiswa praktikum,
++    // atau pakai fallback demo 'edutax'
++    if (!student && cleanInput !== 'edutax') {
++      setError('NIM tidak terdaftar dalam Daftar Peserta Praktikum Perpajakan.');
+       return;
+     }
++
++    const personNik = student ? student.nim : '3271022601770007';
++    const personName = student ? student.nama : 'RAKA';
++
+     updateDb((db) => {
+       db.session = {
+-        personNik: MAIN_ACCOUNT_SEED.nik,
+-        personName: MAIN_ACCOUNT_SEED.name,
++        personNik,
++        personName,
+         impersonatingTin: null,
+         activeNitku: null,
+         loggedInAt: new Date().toISOString(),
+       };
+-      ensureSeedData(db);
+-      addAuditEvent(db, 'Login', 'Masuk ke EduTax');
++      ensureSeedData(db, { nik: personNik, name: personName });
++      addAuditEvent(db, 'Login', `Masuk ke EduTax sebagai ${personName} (${personNik})`);
+     });
+     router.push('/portal');
+   }
+@@ -93,12 +100,12 @@ export default function LoginPage() {
+           <div className="mt-2.5 space-y-2">
+             <div>
+               <label className="field-label !mb-0.5 text-[11px]" htmlFor="userId">
+-                ID Pengguna <span className="text-bad">*</span>
++                ID Pengguna (NIM Mahasiswa) <span className="text-bad">*</span>
+               </label>
+               <input
+                 id="userId"
+                 className="field-input !py-1 text-[11px]"
+-                placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
++                placeholder="Masukkan 11 digit NIM Anda"
+                 value={userId}
+                 onChange={(e) => setUserId(e.target.value)}
+                 autoComplete="username"
+@@ -185,17 +192,13 @@ export default function LoginPage() {
+             
+             <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
+               <p className="flex items-center gap-1.5 font-semibold">
+-                <Info size={12} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
++                <Info size={12} /> Akun Praktikum Mahasiswa UNY
+               </p>
+               <p className="mt-1">
+-                ID Pengguna: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_USER}</code>{' '}
+-                Kata Sandi: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_PASS}</code>{' '}
+-                <span className="text-brand-600">(captcha diketik sesuai gambar)</span>
++                Gunakan <strong>NIM Anda</strong> sebagai ID Pengguna dan kata sandi praktikum untuk masuk.
+               </p>
+               <p className="mt-1 text-xxs text-brand-700">
+-                Setelah masuk, identitas simulasi Anda otomatis terisi sebagai{' '}
+-                <strong>{MAIN_ACCOUNT_SEED.nik} {MAIN_ACCOUNT_SEED.name}</strong> — kredensial login
+-                di atas hanya untuk masuk bersama, bukan identitas wajib pajak itu sendiri.
++                Setelah masuk, identitas akun Orang Pribadi dan dokumen simulasi otomatis terisi sesuai dengan nama dan NIM Anda masing-masing.
+               </p>
+             </div>
+           </div>
+diff --git a/src/components/ui/BupotAnnex.tsx b/src/components/ui/BupotAnnex.tsx
+index 79ba0f1..a48c849 100644
+--- a/src/components/ui/BupotAnnex.tsx
++++ b/src/components/ui/BupotAnnex.tsx
+@@ -32,10 +32,34 @@ export function BupotAnnex({ title, rows, annual = false, lastPeriod = false, al
+     <input className="field-input max-w-md" aria-label={`Cari ${title}`} placeholder="Cari NIK, nama, nomor bukti, objek pajak, atau NITKU" value={query} onChange={(e) => { setQuery(e.target.value); setPage(0); }} />
+     <ExportIconRow onRefresh={() => { setQuery(''); setPage(0); }} onCsv={() => downloadCsv(`${title}.csv`, headers, exportRows)}
+       onXls={() => downloadXls(`${title}.xls`, headers, exportRows)} onPdf={() => printAsPdf(title, headers, exportRows)} />
+-    <div className="overflow-x-auto"><table className="data-table"><thead><tr>{headers.map((h) => <th key={h}>{h}</th>)}</tr></thead>
++    <div className="overflow-x-auto"><table className="data-table"><thead><tr>{headers.map((h, j) => <th key={h} className={j === 7 || j === 8 ? 'text-right' : ''}>{h}</th>)}</tr></thead>
+       <tbody>{!values.length && <tr><td colSpan={headers.length} className="py-6 text-center">Tidak ada data yang ditemukan.</td></tr>}
+-        {values.slice(current * 10, current * 10 + 10).map((row, i) => <tr key={filtered[current * 10 + i].id}>{row.map((v, j) => <td key={j} className={j === 7 || j === 8 ? 'text-right' : ''}>{typeof v === 'number' && j > 0 ? v.toLocaleString('id-ID') : v}</td>)}</tr>)}
+-      </tbody><tfoot><tr><td colSpan={7}>TOTAL</td><td className="text-right">{totalGross.toLocaleString('id-ID')}</td><td className="text-right">{totalTax.toLocaleString('id-ID')}</td><td colSpan={4} /></tr></tfoot>
++        {values.slice(current * 10, current * 10 + 10).map((row, i) => (
++          <tr key={filtered[current * 10 + i].id}>
++            {row.map((v, j) => (
++              <td key={j} className={j === 7 || j === 8 ? 'text-right font-mono' : j === 1 || j === 4 || j === 6 || j === 11 ? 'font-mono' : ''}>
++                {j === 12 ? (
++                  <span
++                    className={`inline-block rounded px-2 py-0.5 text-xxs font-semibold ${
++                      v === 'ISSUED'
++                        ? 'bg-emerald-100 text-emerald-800'
++                        : v === 'SUBMITTED'
++                        ? 'bg-blue-100 text-blue-800'
++                        : 'bg-canvas text-ink-muted'
++                    }`}
++                  >
++                    {String(v)}
++                  </span>
++                ) : typeof v === 'number' && j > 0 ? (
++                  v.toLocaleString('id-ID')
++                ) : (
++                  v
++                )}
++              </td>
++            ))}
++          </tr>
++        ))}
++      </tbody><tfoot><tr><td colSpan={7}>TOTAL</td><td className="text-right font-mono font-semibold">{totalGross.toLocaleString('id-ID')}</td><td className="text-right font-mono font-semibold">{totalTax.toLocaleString('id-ID')}</td><td colSpan={4} /></tr></tfoot>
+     </table></div>
+     <div className="flex items-center gap-3 text-sm"><button className="btn-secondary" disabled={current === 0} onClick={() => setPage(current - 1)}>Sebelumnya</button>
+       <span>Halaman {current + 1} / {lastPage + 1} · {values.length} bukti potong</span>
+diff --git a/src/components/ui/SignDialog.tsx b/src/components/ui/SignDialog.tsx
+index f2a905d..9e9106e 100644
+--- a/src/components/ui/SignDialog.tsx
++++ b/src/components/ui/SignDialog.tsx
+@@ -29,15 +29,18 @@ const PROVIDER_LABEL: Record<CertificateProvider, string> = {
+ export function SignDialog({
+   signerNik,
+   credential,
++  requireSave = false,
+   onCancel,
+   onConfirm,
+ }: {
+   signerNik: string;
+   credential: SigningCredential | null;
++  requireSave?: boolean;
+   onCancel: () => void;
+   onConfirm: (password: string, provider: CertificateProvider) => void;
+ }) {
+   const [pass, setPass] = useState('');
++  const [saved, setSaved] = useState(!requireSave);
+   const [error, setError] = useState<string | null>(null);
+ 
+   if (!credential) {
+@@ -97,7 +100,12 @@ export function SignDialog({
+         </div>
+         <div className="mt-5 flex justify-end gap-2">
+           <button className="btn-secondary" onClick={onCancel}>Batal</button>
+-          <button className="btn-primary" onClick={confirm} disabled={!pass}>
++          {requireSave && !saved && (
++            <button className="btn-secondary" onClick={() => setSaved(true)} disabled={!pass}>
++              Simpan
++            </button>
++          )}
++          <button className="btn-primary" onClick={confirm} disabled={!pass || (requireSave && !saved)}>
+             Konfirmasi Tanda Tangan
+           </button>
+         </div>
+diff --git a/src/lib/domain/bp21.ts b/src/lib/domain/bp21.ts
+index cf9fb04..fe9ad39 100644
+--- a/src/lib/domain/bp21.ts
++++ b/src/lib/domain/bp21.ts
+@@ -120,11 +120,48 @@ export function taxObjectByName(name: string): TaxObjectOption {
+  * rupiah penuh. Lihat catatan PENTING di atas soal entri yang belum
+  * terverifikasi.
+  */
++/**
++ * PPh Pasal 21 dipotong untuk Bukan Pegawai / Tenaga Ahli (PMK-168/2023):
++ * Dasar Pengenaan Pajak (DPP) = 50% × Penghasilan Bruto.
++ * Tarif menggunakan tarif progresif Pasal 17 UU PPh atas dasar pengenaan pajak.
++ * (Untuk 2 juta -> DPP 1 juta x 5% = 50.000)
++ * (Untuk 200 juta -> DPP 100 juta -> 60jt x 5% + 40jt x 15% = 3jt + 6jt = 9.000.000)
++ */
+ export function withheldByTaxObject(
+   name: string,
+   gross: number,
+ ): { deemedNetIncome: number; rate: number; withheld: number } {
+   const { deemedNetIncome, rate } = taxObjectByName(name);
+   const deemedNetAmount = (gross * deemedNetIncome) / 100;
++  
++  if (name.startsWith('Imbalan kepada Tenaga Ahli')) {
++    // Progresif Pasal 17
++    let remaining = deemedNetAmount;
++    let tax = 0;
++    const b1 = Math.min(remaining, 60_000_000);
++    tax += (b1 * 5) / 100;
++    remaining -= b1;
++    if (remaining > 0) {
++      const b2 = Math.min(remaining, 190_000_000); // 250jt - 60jt
++      tax += (b2 * 15) / 100;
++      remaining -= b2;
++    }
++    if (remaining > 0) {
++      const b3 = Math.min(remaining, 250_000_000); // 500jt - 250jt
++      tax += (b3 * 25) / 100;
++      remaining -= b3;
++    }
++    if (remaining > 0) {
++      const b4 = Math.min(remaining, 4_500_000_000); // 5M - 500jt
++      tax += (b4 * 30) / 100;
++      remaining -= b4;
++    }
++    if (remaining > 0) {
++      tax += (remaining * 35) / 100;
++    }
++    const effRate = gross > 0 ? (tax / gross) * 100 : rate;
++    return { deemedNetIncome, rate: effRate, withheld: Math.floor(tax) };
++  }
++
+   return { deemedNetIncome, rate, withheld: Math.floor((deemedNetAmount * rate) / 100) };
+ }
+diff --git a/src/lib/domain/bpa2.ts b/src/lib/domain/bpa2.ts
+index 675ea6e..97ebdf9 100644
+--- a/src/lib/domain/bpa2.ts
++++ b/src/lib/domain/bpa2.ts
+@@ -125,7 +125,7 @@ export function calculateBpa2(input: {
+   const netIncome = totalGross - biayaJabatan(totalGross, input.months);
+   const totalNetIncomeForCalc = netIncome + input.netIncomeFromPrevious;
+   const taxExemption = PTKP_AMOUNTS[input.ptkp] ?? PTKP_AMOUNTS['TK/0'];
+-  const taxableIncome = Math.max(0, totalNetIncomeForCalc - taxExemption);
++  const taxableIncome = Math.floor(Math.max(0, totalNetIncomeForCalc - taxExemption) / 1000) * 1000;
+   const article21TaxOnTaxableIncome = progressiveTax(taxableIncome);
+   const article21TaxLiability = article21TaxOnTaxableIncome;
+   const article21TaxLiabilityInThisSlip = article21TaxLiability - input.article21TaxWithheldFromPrevious;
+@@ -146,3 +146,13 @@ export function calculateBpa2(input: {
+     underOverPayment,
+   };
+ }
++
++export function previouslyWithheld(doc: any): number {
++  if (doc?.fields?.taxWithheld !== undefined) {
++    return Number(doc.fields.taxWithheld);
++  }
++  if (doc?.fields?.underOverPayment !== undefined && doc?.withheld !== undefined) {
++    return Number(doc.withheld) - Number(doc.fields.underOverPayment);
++  }
++  return Number(doc?.withheld ?? 0);
++}
+diff --git a/src/lib/domain/portal.ts b/src/lib/domain/portal.ts
+index c2b5ca2..adb50a8 100644
+--- a/src/lib/domain/portal.ts
++++ b/src/lib/domain/portal.ts
+@@ -165,7 +165,10 @@ export const SEED_ENTITY = {
+  * manual lebih dulu. Dipanggil dari halaman login, dijaga idempoten lewat
+  * pengecekan TIN supaya tidak dobel kalau mahasiswa login berkali-kali.
+  */
+-export function ensureSeedData(db: Database) {
++export function ensureSeedData(db: Database, customUser?: { nik: string; name: string }) {
++  const mainNik = customUser?.nik || db.session?.personNik || MAIN_ACCOUNT_SEED.nik;
++  const mainName = customUser?.name || db.session?.personName || MAIN_ACCOUNT_SEED.name;
++
+   if (!db.entities.some((e) => e.tin === SEED_ENTITY.tin)) {
+     db.entities.push({
+       tin: SEED_ENTITY.tin,
+@@ -182,7 +185,7 @@ export function ensureSeedData(db: Database) {
+       kluKode: '',
+       kluDeskripsi: '',
+       alamat: SEED_ENTITY.address,
+-      picNiks: [MAIN_ACCOUNT_SEED.nik],
++      picNiks: [mainNik],
+     });
+   }
+ 
+@@ -191,13 +194,13 @@ export function ensureSeedData(db: Database) {
+   // terisi secara otomatis oleh sistem" — disemai di sini supaya formulir
+   // itu langsung terisi penuh sejak kunjungan pertama, tanpa mahasiswa harus
+   // mengetik alamat/kontak sendiri lebih dulu.
+-  if (!db.mainAccountProfile) {
++  if (!db.mainAccountProfile || customUser) {
+     db.mainAccountProfile = {
+-      nik: MAIN_ACCOUNT_SEED.nik,
+-      nama: MAIN_ACCOUNT_SEED.name,
++      nik: mainNik,
++      nama: mainName,
+       alamat: 'Jl. Jenderal Gatot Subroto Kav. 40-42, Senayan, Kebayoran Baru, Jakarta Selatan',
+-      email: 'testingctas@kemenkeu.go.id',
+-      phone: '+6281999760161',
++      email: `${mainNik.toLowerCase()}@student.uny.ac.id`,
++      phone: '+628123456789',
+       signingCredential: null,
+     };
+   }
+diff --git a/src/lib/domain/sptCalc.ts b/src/lib/domain/sptCalc.ts
+index 9239e46..a685da4 100644
+--- a/src/lib/domain/sptCalc.ts
++++ b/src/lib/domain/sptCalc.ts
+@@ -7,7 +7,7 @@ import type { BupotDoc, SptDoc, SptManualRows } from './types';
+  * manual oleh pengguna atau dibawa dari SPT sebelumnya.
+  */
+ 
+-const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1'];
++const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1', 'BPA2'];
+ const ARTICLE_26_KINDS = ['BP26'];
+ 
+ function issuedBupotsFor(
+@@ -28,7 +28,13 @@ function issuedBupotsFor(
+ }
+ 
+ export function totalWithheld(bupots: BupotDoc[]): number {
+-  return bupots.reduce((sum, b) => sum + b.withheld, 0);
++  return bupots.reduce((sum, b) => {
++    if (b.kind === 'BPA2') {
++      const uo = Number(b.fields?.underOverPayment ?? 0);
++      return sum + uo;
++    }
++    return sum + b.withheld;
++  }, 0);
+ }
+ 
+ export interface ArticleSummaryRow {
+@@ -48,14 +54,35 @@ export function buildArticleSummary(
+   spt: SptDoc,
+   bupots: BupotDoc[],
+   article: '21' | '26',
+-): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number } {
++  priorSpts: SptDoc[] = [],
++): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number; balance: number } {
+   const kinds = article === '21' ? ARTICLE_21_KINDS : ARTICLE_26_KINDS;
+   const kap = article === '21' ? '411121-100' : '411127-100';
+   const relevant = issuedBupotsFor(bupots, spt.entityTin, spt.taxPeriodMonth, spt.taxPeriodYear, kinds);
+   const manual = article === '21' ? spt.manualArticle21 : spt.manualArticle26;
+ 
+-  const grossWithheld = totalWithheld(relevant);
+-  const carryForward = 0; // Disederhanakan: kelebihan periode sebelumnya belum dilacak lintas SPT.
++  let grossWithheld = totalWithheld(relevant);
++
++  // Jika ada SPT sebelumnya yang dilaporkan, cari kompensasi lebih bayar
++  let carryForward = 0;
++  if (priorSpts && priorSpts.length > 0) {
++    const sorted = [...priorSpts].sort((a, b) => a.taxPeriodMonth - b.taxPeriodMonth);
++    // Cari SPT dilaporkan paling akhir sebelum periode berjalan
++    const earlier = sorted.filter(
++      (p) => p.status === 'DILAPORKAN' && p.taxPeriodMonth < spt.taxPeriodMonth
++    );
++    if (earlier.length > 0) {
++      const prev = earlier[earlier.length - 1];
++      const snapCarry = (prev as any).snapshot?.carry21;
++      const sumPrev = buildArticleSummary(prev, (prev as any).snapshot?.bupots ?? [], article);
++      if (snapCarry !== undefined && snapCarry > 0) {
++        carryForward = snapCarry - totalWithheld((prev as any).snapshot?.bupots ?? []);
++      } else if (sumPrev.balance < 0) {
++        carryForward = Math.abs(sumPrev.balance);
++      }
++    }
++  }
++
+   const row4 = grossWithheld - carryForward - manual.sp2d;
+   const row6 = spt.model === 'PEMBETULAN' ? row4 - manual.paidOnCorrectedReturn : 0;
+ 
+@@ -91,7 +118,13 @@ export function buildArticleSummary(
+   ];
+ 
+   const netPayable = spt.model === 'PEMBETULAN' ? row6 : row4;
+-  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0) };
++
++  if (spt.status === 'DILAPORKAN' && (spt as any).snapshot?.bupots) {
++    const snapSummary = buildArticleSummary({ ...spt, status: 'KONSEP' }, (spt as any).snapshot.bupots, article, priorSpts);
++    return { withheld, borneByGovernment, netPayable: 0, balance: snapSummary.balance };
++  }
++
++  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0), balance: row4 };
+ }
+ 
+ export function totalNetPayable(spt: SptDoc, bupots: BupotDoc[]): number {
+@@ -165,6 +198,10 @@ export function periodGross(bupot: BupotDoc, all: BupotDoc[]): number {
+     return bupot.gross;
+   }
+ 
++  if (bupot.fields?.lastPeriodGross !== undefined) {
++    return Number(bupot.fields.lastPeriodGross);
++  }
++
+   const startMonth = Number(bupot.fields.startMonth ?? bupot.taxPeriodMonth);
+   const startYear = Number(bupot.fields.startYear ?? bupot.taxPeriodYear);
+ 
+@@ -192,18 +229,22 @@ export function periodWithheld(bupot: BupotDoc): number {
+     return bupot.withheld;
+   }
+ 
++  if (bupot.fields?.underOverPayment !== undefined) {
++    return Number(bupot.fields.underOverPayment);
++  }
++
+   const taxLiability = Number(
+     bupot.fields.taxLiability ??
+     bupot.fields.article21TaxLiabilityInThisSlip ??
++    bupot.withheld ??
+     0,
+   );
+ 
+   const taxWithheld = Number(
+     bupot.fields.taxWithheld ??
+     bupot.fields.article21TaxWithheld ??
+-    bupot.withheld ??
+     0,
+   );
+ 
+-  return taxWithheld - taxLiability;
++  return taxLiability - taxWithheld;
+ }
+\ No newline at end of file
+diff --git a/src/lib/domain/students.json b/src/lib/domain/students.json
+new file mode 100644
+index 0000000..7a6c926
+--- /dev/null
++++ b/src/lib/domain/students.json
+@@ -0,0 +1,520 @@
++[
++  {
++    "no": 1,
++    "nim": "23091220020",
++    "nama": "OKTAVIANA",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 2,
++    "nim": "25091220079",
++    "nama": "Attila Fitra Dhifara",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 3,
++    "nim": "25091220090",
++    "nama": "Rafeyfa Farah Azzahra",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 4,
++    "nim": "25091220092",
++    "nama": "Riska Azahrani Putri",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 5,
++    "nim": "25091220095",
++    "nama": "Rifani Nur Hanifah",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 6,
++    "nim": "25091220098",
++    "nama": "Aurora Ardelia Putri",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 7,
++    "nim": "25091220099",
++    "nama": "Faiza Ningtyasani",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 8,
++    "nim": "25091220100",
++    "nama": "Reni Kusumawati",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 9,
++    "nim": "25091220101",
++    "nama": "Verlyta Anastasya Susanti",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 10,
++    "nim": "25091220106",
++    "nama": "Braien Rizqulloh Izzatul Aibad",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 11,
++    "nim": "25091220109",
++    "nama": "Synesius Lanang Abiyasa",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 12,
++    "nim": "25091220110",
++    "nama": "Nur Khasanah Susanti",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 13,
++    "nim": "25091220116",
++    "nama": "Fadhilla Meysi Putri",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 14,
++    "nim": "25091220117",
++    "nama": "Esa Ayu Azahra",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 15,
++    "nim": "25091220119",
++    "nama": "Davian Harisyah Putra",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 16,
++    "nim": "25091220121",
++    "nama": "Isnani Hurriyah",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 17,
++    "nim": "25091220125",
++    "nama": "Nayla Azzahra Putri",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 18,
++    "nim": "25091220146",
++    "nama": "Siti Muthmainnah Praditya Putri",
++    "kelas": "A GK",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 1,
++    "nim": "25091220062",
++    "nama": "Nailatul Aufa",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 2,
++    "nim": "25091220063",
++    "nama": "Nurul Insyiroh",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 3,
++    "nim": "25091220081",
++    "nama": "Syifanur Aini",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 4,
++    "nim": "25091220082",
++    "nama": "DILLA MURNI ROSIYANTI",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 5,
++    "nim": "25091220083",
++    "nama": "Felisia Joy Sarumaha",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 6,
++    "nim": "25091220084",
++    "nama": "Weyta Eulia Sigalingging",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 7,
++    "nim": "25091220087",
++    "nama": "Khansa Happy Viemara",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 8,
++    "nim": "25091220088",
++    "nama": "Nailah Leani Utami",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 9,
++    "nim": "25091220089",
++    "nama": "Nadiya Hasna Luthfiya Sabrina",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 10,
++    "nim": "25091220091",
++    "nama": "Muhamad Rafa Setyawan",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 11,
++    "nim": "25091220096",
++    "nama": "Aulia Sri Lestari",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 12,
++    "nim": "25091220104",
++    "nama": "Rahel Febi Vinachiaro Sitorus",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 13,
++    "nim": "25091220108",
++    "nama": "Laila Fanesha Putri",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 14,
++    "nim": "25091220112",
++    "nama": "Meiva Wulandari",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 15,
++    "nim": "25091220113",
++    "nama": "Najwa Lukluk Ul'ilma Syah Putrie",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 16,
++    "nim": "25091220114",
++    "nama": "Sifa Alika Meysiana",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 17,
++    "nim": "25091220118",
++    "nama": "Arda Ariansyah Harya Atmadja",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 18,
++    "nim": "25091220122",
++    "nama": "Tabitha Florencia Natali Hutabarat",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 19,
++    "nim": "25091220124",
++    "nama": "Luisa Indah Rahmawati",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 20,
++    "nim": "25091220126",
++    "nama": "Dinda Agisnawati Hutabarat",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 21,
++    "nim": "25091220128",
++    "nama": "Ismi Amaliah",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 22,
++    "nim": "25091220131",
++    "nama": "Aisyah Inas Tsabita",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 23,
++    "nim": "25091220134",
++    "nama": "Mohammad Wildan Khuzaeni",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 24,
++    "nim": "25091220136",
++    "nama": "Nofika Izzatunisa",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 25,
++    "nim": "25091220138",
++    "nama": "Della Ahya Sabila Rohmad",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 26,
++    "nim": "25091220143",
++    "nama": "Raissa Nuria Indriatmoko",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 27,
++    "nim": "25091220144",
++    "nama": "Fathin Haya Aliifah",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 28,
++    "nim": "25091220147",
++    "nama": "AULIA AINUN NAFISAH",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 29,
++    "nim": "25091220149",
++    "nama": "Farah Nafiah Widyaningsih",
++    "kelas": "A",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 1,
++    "nim": "25091220078",
++    "nama": "Ravika Reista Amelia",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 2,
++    "nim": "25091220080",
++    "nama": "Sabrina Jasmine",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 3,
++    "nim": "25091220085",
++    "nama": "M. Asbend Turawi",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 4,
++    "nim": "25091220086",
++    "nama": "Siti Aisyah",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 5,
++    "nim": "25091220093",
++    "nama": "Syila Silviana",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 6,
++    "nim": "25091220094",
++    "nama": "Ahmad Althaf Hadikusuma",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 7,
++    "nim": "25091220097",
++    "nama": "Citra Amelia Putri",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 8,
++    "nim": "25091220102",
++    "nama": "Yufal Aulia Al Fahsya",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 9,
++    "nim": "25091220103",
++    "nama": "Danu Widyantoro",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 10,
++    "nim": "25091220105",
++    "nama": "Joe Fanka De Lovely Muhammad",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 11,
++    "nim": "25091220107",
++    "nama": "Risma Nur Istiqomah",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 12,
++    "nim": "25091220111",
++    "nama": "Fedelis Imas Tri Pamungkas",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 13,
++    "nim": "25091220115",
++    "nama": "Pramesty Hapsary",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 14,
++    "nim": "25091220120",
++    "nama": "Desli Aulia Putri",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 15,
++    "nim": "25091220123",
++    "nama": "Nauval Ulul Azmi",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 16,
++    "nim": "25091220127",
++    "nama": "Alya Zahfira Putri",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 17,
++    "nim": "25091220130",
++    "nama": "Kefas Binsartua Febriano Marpaung",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 18,
++    "nim": "25091220132",
++    "nama": "Dea Ayu Karikavita",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 19,
++    "nim": "25091220133",
++    "nama": "Ratu Darani Fatwa Ahlullah",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 20,
++    "nim": "25091220135",
++    "nama": "Ranni Diana Rosyda",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 21,
++    "nim": "25091220137",
++    "nama": "Viviana Ajeng Prasivi",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 22,
++    "nim": "25091220139",
++    "nama": "Ibnu Al Falaq",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 23,
++    "nim": "25091220140",
++    "nama": "Afifah Huwaida Khansa",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 24,
++    "nim": "25091220141",
++    "nama": "Sophia Rahmi Batubara",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 25,
++    "nim": "25091220142",
++    "nama": "M. Akbar Alfattah Rohman",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 26,
++    "nim": "25091220145",
++    "nama": "Alya Nabila",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  },
++  {
++    "no": 27,
++    "nim": "25091220148",
++    "nama": "Nizar Ahsan Afada",
++    "kelas": "B",
++    "prodi": "AKUNTANSI-D4"
++  }
++]
+\ No newline at end of file
+diff --git a/src/lib/domain/students.ts b/src/lib/domain/students.ts
+new file mode 100644
+index 0000000..ebb02ef
+--- /dev/null
++++ b/src/lib/domain/students.ts
+@@ -0,0 +1,16 @@
++import studentsData from './students.json';
++
++export interface Student {
++  no: number;
++  nim: string;
++  nama: string;
++  kelas: string;
++  prodi: string;
++}
++
++export const STUDENTS: Student[] = studentsData as Student[];
++
++export function findStudentByNim(nim: string): Student | undefined {
++  const clean = nim.trim();
++  return STUDENTS.find((s) => s.nim === clean);
++}
+diff --git a/src/lib/domain/ter.ts b/src/lib/domain/ter.ts
+index c65c457..f1e441a 100644
+--- a/src/lib/domain/ter.ts
++++ b/src/lib/domain/ter.ts
+@@ -1,11 +1,8 @@
+ /**
+- * Tarif Efektif Rata-rata (TER) bulanan — PMK 168 Tahun 2023.
+- *
+- * PENTING: tabel di bawah baru memuat sebagian bracket sebagai contoh bentuk
+- * data. Lengkapi seluruh bracket dari Lampiran PMK-168/2023 sebelum dipakai
+- * mahasiswa, dan cocokkan hasilnya dengan contoh perhitungan di lampiran
+- * tersebut. Bracket ditulis sebagai batas bawah inklusif agar mudah diperiksa
+- * baris per baris terhadap dokumen aslinya.
++ * Tarif Efektif Rata-rata (TER) bulanan — PP 58/2023 & PMK 168/2023.
++ * Kategori A: TK/0 (54 jt), TK/1 (58,5 jt), K/0 (58,5 jt) — 44 lapisan tarif
++ * Kategori B: TK/2 (63 jt), TK/3 (67,5 jt), K/1 (63 jt), K/2 (67,5 jt) — 40 lapisan tarif
++ * Kategori C: K/3 (72 jt) — 41 lapisan tarif
+  */
+ 
+ export type TerCategory = 'A' | 'B' | 'C';
+@@ -19,48 +16,149 @@ export const PTKP_TO_TER: Record<string, TerCategory> = {
+ 
+ export const PTKP_OPTIONS = Object.keys(PTKP_TO_TER);
+ 
+-interface Bracket {
+-  /** Batas bawah penghasilan bruto bulanan, inklusif. */
+-  from: number;
+-  /** Tarif dalam persen. */
+-  rate: number;
+-}
++export type TerTuple = [number, number];
+ 
+-const TER_TABLE: Record<TerCategory, Bracket[]> = {
++export const TER_TABLE: Record<TerCategory, TerTuple[]> = {
+   A: [
+-    { from: 0, rate: 0 },
+-    { from: 5_400_001, rate: 0.25 },
+-    { from: 5_650_001, rate: 0.5 },
+-    { from: 5_950_001, rate: 0.75 },
+-    { from: 6_300_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori A dari Lampiran PMK-168/2023.
++    [5_400_000, 0],
++    [5_650_000, 0.25],
++    [5_950_000, 0.5],
++    [6_300_000, 0.75],
++    [6_750_000, 1],
++    [7_500_000, 1.25],
++    [8_550_000, 1.5],
++    [9_650_000, 1.75],
++    [10_050_000, 2],
++    [10_350_000, 2.25],
++    [10_700_000, 2.5],
++    [11_050_000, 3],
++    [11_600_000, 3.5],
++    [12_500_000, 4],
++    [13_750_000, 5],
++    [15_100_000, 6],
++    [16_950_000, 7],
++    [19_750_000, 8],
++    [24_100_000, 9],
++    [26_450_000, 10],
++    [28_000_000, 11],
++    [30_050_000, 12],
++    [32_400_000, 13],
++    [35_400_000, 14],
++    [39_100_000, 15],
++    [43_850_000, 16],
++    [47_800_000, 17],
++    [51_400_000, 18],
++    [56_300_000, 19],
++    [62_200_000, 20],
++    [68_600_000, 21],
++    [77_500_000, 22],
++    [89_000_000, 23],
++    [103_000_000, 24],
++    [125_000_000, 25],
++    [157_000_000, 26],
++    [206_000_000, 27],
++    [337_000_000, 28],
++    [454_000_000, 29],
++    [550_000_000, 30],
++    [695_000_000, 31],
++    [910_000_000, 32],
++    [1_400_000_000, 33],
++    [Infinity, 34],
+   ],
+   B: [
+-    { from: 0, rate: 0 },
+-    { from: 6_200_001, rate: 0.25 },
+-    { from: 6_500_001, rate: 0.5 },
+-    { from: 6_850_001, rate: 0.75 },
+-    { from: 7_300_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori B.
++    [6_200_000, 0],
++    [6_500_000, 0.25],
++    [6_850_000, 0.5],
++    [7_300_000, 0.75],
++    [9_200_000, 1],
++    [10_750_000, 1.5],
++    [11_250_000, 2],
++    [11_600_000, 2.5],
++    [12_600_000, 3],
++    [13_600_000, 4],
++    [14_950_000, 5],
++    [16_400_000, 6],
++    [18_450_000, 7],
++    [21_850_000, 8],
++    [26_000_000, 9],
++    [27_700_000, 10],
++    [29_350_000, 11],
++    [31_450_000, 12],
++    [33_950_000, 13],
++    [37_100_000, 14],
++    [41_100_000, 15],
++    [45_800_000, 16],
++    [49_500_000, 17],
++    [53_800_000, 18],
++    [58_500_000, 19],
++    [64_000_000, 20],
++    [71_000_000, 21],
++    [80_000_000, 22],
++    [93_000_000, 23],
++    [109_000_000, 24],
++    [129_000_000, 25],
++    [163_000_000, 26],
++    [211_000_000, 27],
++    [374_000_000, 28],
++    [459_000_000, 29],
++    [555_000_000, 30],
++    [704_000_000, 31],
++    [957_000_000, 32],
++    [1_405_000_000, 33],
++    [Infinity, 34],
+   ],
+   C: [
+-    { from: 0, rate: 0 },
+-    { from: 6_600_001, rate: 0.25 },
+-    { from: 6_950_001, rate: 0.5 },
+-    { from: 7_350_001, rate: 0.75 },
+-    { from: 7_800_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori C.
++    [6_600_000, 0],
++    [6_950_000, 0.25],
++    [7_350_000, 0.5],
++    [7_800_000, 0.75],
++    [8_850_000, 1],
++    [9_800_000, 1.25],
++    [10_950_000, 1.5],
++    [11_200_000, 1.75],
++    [12_050_000, 2],
++    [12_950_000, 3],
++    [14_150_000, 4],
++    [15_550_000, 5],
++    [17_050_000, 6],
++    [19_500_000, 7],
++    [22_700_000, 8],
++    [26_600_000, 9],
++    [28_100_000, 10],
++    [30_100_000, 11],
++    [32_600_000, 12],
++    [35_400_000, 13],
++    [38_900_000, 14],
++    [43_000_000, 15],
++    [47_400_000, 16],
++    [51_200_000, 17],
++    [55_800_000, 18],
++    [60_400_000, 19],
++    [66_700_000, 20],
++    [74_500_000, 21],
++    [83_200_000, 22],
++    [95_600_000, 23],
++    [110_000_000, 24],
++    [134_000_000, 25],
++    [169_000_000, 26],
++    [221_000_000, 27],
++    [390_000_000, 28],
++    [463_000_000, 29],
++    [561_000_000, 30],
++    [709_000_000, 31],
++    [965_000_000, 32],
++    [1_419_000_000, 33],
++    [Infinity, 34],
+   ],
+ };
+ 
+ export function terRate(ptkp: string, gross: number): number {
+   const category = PTKP_TO_TER[ptkp] ?? 'A';
+   const table = TER_TABLE[category];
+-  let rate = 0;
+-  for (const b of table) {
+-    if (gross >= b.from) rate = b.rate;
++  for (const [limit, rate] of table) {
++    if (gross <= limit) return rate;
+   }
+-  return rate;
++  return 34;
+ }
+ 
+ /** PPh Pasal 21 bulanan dibulatkan ke rupiah penuh. */
+diff --git a/src/lib/storage/csv.ts b/src/lib/storage/csv.ts
+index a7c3fd9..87e2e63 100644
+--- a/src/lib/storage/csv.ts
++++ b/src/lib/storage/csv.ts
+@@ -184,8 +184,28 @@ export function downloadExcelTemplate(filename: string, sheetName: string, heade
+ export function parseSpreadsheetXml(text: string): string[][] {
+   const doc = new DOMParser().parseFromString(text, 'application/xml');
+   if (doc.querySelector('parsererror')) return [];
+-  const rows = Array.from(doc.getElementsByTagName('Row'));
+-  return rows.map((r) =>
+-    Array.from(r.getElementsByTagName('Cell')).map((c) => c.getElementsByTagName('Data')[0]?.textContent ?? ''),
+-  );
++  const rows = Array.from(doc.getElementsByTagNameNS('*', 'Row'));
++  return rows.map((r) => {
++    const cells = Array.from(r.getElementsByTagNameNS('*', 'Cell'));
++    const result: string[] = [];
++    let curIdx = 0;
++    for (const c of cells) {
++      const idxAttr =
++        c.getAttributeNS('urn:schemas-microsoft-com:office:spreadsheet', 'Index') ||
++        c.getAttribute('ss:Index') ||
++        c.getAttribute('Index');
++      if (idxAttr) {
++        const targetIdx = parseInt(idxAttr, 10) - 1;
++        while (result.length < targetIdx) {
++          result.push('');
++        }
++        curIdx = targetIdx;
++      }
++      const dataEl = c.getElementsByTagNameNS('*', 'Data')[0];
++      const val = dataEl?.textContent ?? '';
++      result[curIdx] = val;
++      curIdx++;
++    }
++    return result;
++  });
+ }
+diff --git a/tests/browser/ebupot.spec.cjs b/tests/browser/ebupot.spec.cjs
+index 922e975..7b1b7ce 100644
+--- a/tests/browser/ebupot.spec.cjs
++++ b/tests/browser/ebupot.spec.cjs
+@@ -8,7 +8,7 @@ const fields={startMonth:1,startYear:2024,ptkp:'K/0',nip:'123123123123',gender:'
+ const bpa2={id:'annual',kind:'BPA2',entityTin:tin,status:'DRAFT',withholdingNumber:null,taxPeriodMonth:10,taxPeriodYear:2024,counterpartTin:nik,counterpartName:'RAKA',taxObjectCode:'21-100-01',gross:110000000,rate:0,withheld:2325000,idPlaceOfBusinessActivity:nitku,createdByNik:nik,createdAt:'2024-10-31T00:00:00Z',signature:null,cancelledAt:null,fields};
+ const manual={nonLsPayment:0,sp2d:0,dtp:0,paidOnCorrectedReturn:0};
+ const spt={id:'october',entityTin:tin,kind:'PPH_21_26',model:'NORMAL',pembetulanKe:0,taxPeriodMonth:10,taxPeriodYear:2024,status:'KONSEP',manualArticle21:manual,manualArticle26:manual,declaration:{agreed:false,signedAs:'TAXPAYER',signerName:'RAKA'},signature:null,billing:null,createdAt:'2024-10-31T00:00:00Z',submittedAt:null};
+-function fixture(bupots=[bpa2]) {return {schemaVersion:3,persons:[{nik,nama:'RAKA',padan:true,alamat:'Yogyakarta',negara:'Indonesia',ptkp:'K/0',nip:'123123123123',gender:'Pria',golongan:'IIIa',jabatan:'Staf'}],entities:[{tin,name:'INSTANSI PEMERINTAH XYZ',address:'Yogyakarta',nitkuPusat:nitku}],tkus:[{nitku,entityTin:tin,nama:'Pusat',picNiks:[nik]}],roleAssignments:[],relatedParties:[{entityTin:tin,personNik:nik,isPic:true}],bupots,spts:[spt],session:{personNik:nik,personName:'RAKA',impersonatingTin:tin,activeNitku:null,loggedInAt:'2024-10-31T00:00:00Z'},mainAccountProfile:{nik,nama:'RAKA',signingCredential:{provider:'KODE_OTORISASI_DJP',passphrase:'test-pass',signerId:null}},counters:{},auditTrail:[]};}
++function fixture(bupots=[bpa2]) {return {schemaVersion:4,persons:[{nik,nama:'RAKA',padan:true,alamat:'Yogyakarta',negara:'Indonesia',ptkp:'K/0',nip:'123123123123',gender:'Pria',golongan:'IIIa',jabatan:'Staf'}],entities:[{tin,name:'INSTANSI PEMERINTAH XYZ',address:'Yogyakarta',nitkuPusat:nitku}],tkus:[{nitku,entityTin:tin,nama:'Pusat',picNiks:[nik]}],roleAssignments:[],relatedParties:[{entityTin:tin,personNik:nik,isPic:true}],bupots,spts:[spt],session:{personNik:nik,personName:'RAKA',impersonatingTin:tin,activeNitku:null,loggedInAt:'2024-10-31T00:00:00Z'},mainAccountProfile:{nik,nama:'RAKA',signingCredential:{provider:'KODE_OTORISASI_DJP',passphrase:'test-pass',signerId:null}},counters:{},auditTrail:[]};}
+ async function seed(page,db){await page.addInitScript(db=>{if(!localStorage.getItem('edutax.uny.v1.db'))localStorage.setItem('edutax.uny.v1.db',JSON.stringify(db));},db);}
+ async function state(page){return page.evaluate(()=>JSON.parse(localStorage.getItem('edutax.uny.v1.db')));}
+ test('legacy BPA2 edit, issue, October L-IB, L-II, declaration',async({page})=>{

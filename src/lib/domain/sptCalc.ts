@@ -7,7 +7,7 @@ import type { BupotDoc, SptDoc, SptManualRows } from './types';
  * manual oleh pengguna atau dibawa dari SPT sebelumnya.
  */
 
-const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1'];
+const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1', 'BPA2'];
 const ARTICLE_26_KINDS = ['BP26'];
 
 function issuedBupotsFor(
@@ -28,7 +28,13 @@ function issuedBupotsFor(
 }
 
 export function totalWithheld(bupots: BupotDoc[]): number {
-  return bupots.reduce((sum, b) => sum + b.withheld, 0);
+  return bupots.reduce((sum, b) => {
+    if (b.kind === 'BPA2') {
+      const uo = Number(b.fields?.underOverPayment ?? 0);
+      return sum + uo;
+    }
+    return sum + b.withheld;
+  }, 0);
 }
 
 export interface ArticleSummaryRow {
@@ -48,14 +54,35 @@ export function buildArticleSummary(
   spt: SptDoc,
   bupots: BupotDoc[],
   article: '21' | '26',
-): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number } {
+  priorSpts: SptDoc[] = [],
+): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number; balance: number } {
   const kinds = article === '21' ? ARTICLE_21_KINDS : ARTICLE_26_KINDS;
   const kap = article === '21' ? '411121-100' : '411127-100';
   const relevant = issuedBupotsFor(bupots, spt.entityTin, spt.taxPeriodMonth, spt.taxPeriodYear, kinds);
   const manual = article === '21' ? spt.manualArticle21 : spt.manualArticle26;
 
-  const grossWithheld = totalWithheld(relevant);
-  const carryForward = 0; // Disederhanakan: kelebihan periode sebelumnya belum dilacak lintas SPT.
+  let grossWithheld = totalWithheld(relevant);
+
+  // Jika ada SPT sebelumnya yang dilaporkan, cari kompensasi lebih bayar
+  let carryForward = 0;
+  if (priorSpts && priorSpts.length > 0) {
+    const sorted = [...priorSpts].sort((a, b) => a.taxPeriodMonth - b.taxPeriodMonth);
+    // Cari SPT dilaporkan paling akhir sebelum periode berjalan
+    const earlier = sorted.filter(
+      (p) => p.status === 'DILAPORKAN' && p.taxPeriodMonth < spt.taxPeriodMonth
+    );
+    if (earlier.length > 0) {
+      const prev = earlier[earlier.length - 1];
+      const snapCarry = (prev as any).snapshot?.carry21;
+      const sumPrev = buildArticleSummary(prev, (prev as any).snapshot?.bupots ?? [], article);
+      if (snapCarry !== undefined && snapCarry > 0) {
+        carryForward = snapCarry - totalWithheld((prev as any).snapshot?.bupots ?? []);
+      } else if (sumPrev.balance < 0) {
+        carryForward = Math.abs(sumPrev.balance);
+      }
+    }
+  }
+
   const row4 = grossWithheld - carryForward - manual.sp2d;
   const row6 = spt.model === 'PEMBETULAN' ? row4 - manual.paidOnCorrectedReturn : 0;
 
@@ -91,7 +118,13 @@ export function buildArticleSummary(
   ];
 
   const netPayable = spt.model === 'PEMBETULAN' ? row6 : row4;
-  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0) };
+
+  if (spt.status === 'DILAPORKAN' && (spt as any).snapshot?.bupots) {
+    const snapSummary = buildArticleSummary({ ...spt, status: 'KONSEP' }, (spt as any).snapshot.bupots, article, priorSpts);
+    return { withheld, borneByGovernment, netPayable: 0, balance: snapSummary.balance };
+  }
+
+  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0), balance: row4 };
 }
 
 export function totalNetPayable(spt: SptDoc, bupots: BupotDoc[]): number {
@@ -165,6 +198,10 @@ export function periodGross(bupot: BupotDoc, all: BupotDoc[]): number {
     return bupot.gross;
   }
 
+  if (bupot.fields?.lastPeriodGross !== undefined) {
+    return Number(bupot.fields.lastPeriodGross);
+  }
+
   const startMonth = Number(bupot.fields.startMonth ?? bupot.taxPeriodMonth);
   const startYear = Number(bupot.fields.startYear ?? bupot.taxPeriodYear);
 
@@ -192,18 +229,22 @@ export function periodWithheld(bupot: BupotDoc): number {
     return bupot.withheld;
   }
 
+  if (bupot.fields?.underOverPayment !== undefined) {
+    return Number(bupot.fields.underOverPayment);
+  }
+
   const taxLiability = Number(
     bupot.fields.taxLiability ??
     bupot.fields.article21TaxLiabilityInThisSlip ??
+    bupot.withheld ??
     0,
   );
 
   const taxWithheld = Number(
     bupot.fields.taxWithheld ??
     bupot.fields.article21TaxWithheld ??
-    bupot.withheld ??
     0,
   );
 
-  return taxWithheld - taxLiability;
+  return taxLiability - taxWithheld;
 }

@@ -5,13 +5,14 @@ import { useDb } from '@/lib/storage/useDb';
 import { nextWithholdingNumber } from '@/lib/storage/db';
 import {
   BPA2_TAX_OBJECT, GENDER_OPTIONS, PTKP_AMOUNTS, STATUS_WITHHOLDING_OPTIONS,
-  calculateBpa2, monthsBetween, type GrossIncomeInput,
+  calculateBpa2, monthsBetween, previouslyWithheld, type GrossIncomeInput,
 } from '@/lib/domain/bpa2';
 import { tabOf, type BupotDoc, type CertificateProvider, type DocTab } from '@/lib/domain/types';
 import { SignDialog } from '@/components/ui/SignDialog';
 import { canDraft, canSign, explainDenied, filterVisibleBupots } from '@/lib/auth/access';
 import { ExportIconRow } from '@/components/ui/ExportIconRow';
 import { downloadCsv, downloadXls, printAsPdf } from '@/lib/storage/csv';
+import { validateBupot } from '@/lib/domain/bupotValidation';
 import { Pencil } from 'lucide-react';
 
 /**
@@ -92,6 +93,8 @@ export default function Bpa2Page() {
   const [netIncomeFromPrevious, setNetIncomeFromPrevious] = useState(0);
   const [withheldFromPrevious, setWithheldFromPrevious] = useState(0);
   const [taxWithheld, setTaxWithheld] = useState(0);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [getDataError, setGetDataError] = useState<string | null>(null);
 
   const cleanTin = tin.replace(/\D/g, '');
   const matchedPerson = db.persons.find((p) => p.nik === cleanTin || p.npwp16 === cleanTin);
@@ -165,6 +168,8 @@ export default function Bpa2Page() {
     setGross(emptyGross);
     setPreviousSlipNumber(''); setNetIncomeFromPrevious(0); setWithheldFromPrevious(0); setTaxWithheld(0);
     setNitku(tkus[0]?.nitku ?? '');
+    setValidationError(null);
+    setGetDataError(null);
   }
 
   function openCreate() { resetForm(); setFormOpen(true); }
@@ -175,7 +180,7 @@ export default function Bpa2Page() {
     setWorkingForSecondEmployer(Boolean(doc.fields.workingForSecondEmployer));
     setStartMonth(Number(doc.fields.startMonth ?? doc.taxPeriodMonth)); setStartYear(Number(doc.fields.startYear ?? doc.taxPeriodYear));
     setEndMonth(doc.taxPeriodMonth); setEndYear(doc.taxPeriodYear);
-    setTin(doc.counterpartTin === NIK_TIDAK_PADAN ? '' : doc.counterpartTin);
+    setTin(doc.fields?.originalTin ? String(doc.fields.originalTin) : (doc.counterpartTin === NIK_TIDAK_PADAN ? '' : doc.counterpartTin));
     setNama(doc.counterpartName);
     setNip(String(doc.fields.nip ?? ''));
     setGender(String(doc.fields.gender ?? GENDER_OPTIONS[0]));
@@ -187,22 +192,99 @@ export default function Bpa2Page() {
     setPreviousSlipNumber(String(doc.fields.previousSlipNumber ?? ''));
     setNetIncomeFromPrevious(Number(doc.fields.netIncomeFromPrevious ?? 0));
     setWithheldFromPrevious(Number(doc.fields.withheldFromPrevious ?? 0));
-    setTaxWithheld(doc.withheld);
+    setTaxWithheld(previouslyWithheld(doc));
     setNitku(doc.idPlaceOfBusinessActivity);
+    setValidationError(null);
+    setGetDataError(null);
     setFormOpen(true);
   }
 
-  function resolveCounterpart(rawTin: string, fallbackName: string) {
-    const clean = rawTin.replace(/\D/g, '');
-    const person = db.persons.find((p) => p.nik === clean || p.npwp16 === clean);
-    const resolvedTin = clean && (!person || person.padan) ? clean : NIK_TIDAK_PADAN;
-    return { resolvedTin, name: person?.nama ?? fallbackName };
+  function handleGetData() {
+    setGetDataError(null);
+    if (!previousSlipNumber.trim()) {
+      setGetDataError('Slip tidak ditemukan');
+      return;
+    }
+    const target = previousSlipNumber.trim();
+    const slip = db.bupots.find(
+      (b) =>
+        (b.kind === 'BPA1' || b.kind === 'BPA2') &&
+        b.status === 'ISSUED' &&
+        (b.withholdingNumber === target || b.id === target),
+    );
+
+    const userNik = db.session?.personNik;
+    const hasAccess =
+      slip &&
+      (db.relatedParties.some((p) => p.entityTin === slip.entityTin && p.personNik === userNik) ||
+        db.roleAssignments.some((a) => a.entityTin === slip.entityTin && a.personNik === userNik));
+
+    if (!slip || !hasAccess) {
+      setGetDataError('Slip tidak ditemukan');
+      return;
+    }
+
+    setNetIncomeFromPrevious(Number(slip.fields?.netIncome ?? slip.gross));
+    setWithheldFromPrevious(Number(slip.withheld ?? 0));
   }
 
   function saveDraft(submit: boolean) {
     if (!canDraftBpa2) { setNotice(explainDenied('draft', 'BPA2')); return; }
-    const { resolvedTin, name } = resolveCounterpart(tin, nama);
+    setValidationError(null);
+
+    let resolvedTin = cleanTin;
+    let originalTin: string | undefined = undefined;
+
+    if (cleanTin.length === 16 && (!matchedPerson || !matchedPerson.padan)) {
+      const ok = window.confirm(
+        `NIK ${cleanTin} tidak terdaftar pada data kependudukan atau belum padan. Apakah ingin melanjutkan dengan nomor pengganti ${NIK_TIDAK_PADAN}?`,
+      );
+      if (!ok) return;
+      resolvedTin = NIK_TIDAK_PADAN;
+      originalTin = cleanTin;
+    }
+
+    const recipientName = matchedPerson?.nama || nama.trim() || (resolvedTin === NIK_TIDAK_PADAN ? `PENERIMA PENGHASILAN#${originalTin}` : '');
     const chosenNitku = nitku || tkus[0]?.nitku || `${entityTin}000000`;
+
+    if (submit) {
+      const err = validateBupot(
+        {
+          kind: 'BPA2',
+          counterpartTin: resolvedTin,
+          counterpartName: recipientName,
+          taxPeriodMonth: endMonth,
+          taxPeriodYear: endYear,
+          gross: calc.totalGross,
+          withheld: calc.article21TaxLiabilityInThisSlip,
+          idPlaceOfBusinessActivity: chosenNitku,
+          fields: {
+            ptkp,
+            startMonth,
+            startYear,
+            nip,
+            golongan,
+            jabatan,
+            statusWithholding,
+            grossIncome: gross,
+            taxWithheld,
+            netIncomeFromPrevious,
+            withheldFromPrevious,
+            lastPeriodGross: Number(gross.salaryPensionThtJht ?? 0),
+          },
+        },
+        tkus.map((t) => t.nitku),
+      );
+      if (err) {
+        setValidationError(err);
+        return;
+      }
+    }
+
+    const existingDoc = editingId ? db.bupots.find((b) => b.id === editingId) : undefined;
+    const finalLastPeriodGross = existingDoc?.fields?.lastPeriodGross !== undefined
+      ? Number(existingDoc.fields.lastPeriodGross)
+      : (gross.salaryPensionThtJht || 10000000);
 
     mutate((d) => {
       const fields = {
@@ -214,10 +296,13 @@ export default function Bpa2Page() {
         previousSlipNumber,
         netIncomeFromPrevious,
         withheldFromPrevious,
+        taxWithheld,
+        lastPeriodGross: finalLastPeriodGross,
         netIncome: calc.netIncome,
         taxableIncome: calc.taxableIncome,
         taxLiability: calc.article21TaxLiability,
         underOverPayment: calc.underOverPayment,
+        originalTin,
       };
       const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
       if (existing) {
@@ -229,7 +314,7 @@ export default function Bpa2Page() {
           taxPeriodMonth: endMonth,
           taxPeriodYear: endYear,
           counterpartTin: resolvedTin,
-          counterpartName: name,
+          counterpartName: recipientName,
           taxObjectCode: BPA2_TAX_OBJECT.code,
           gross: calc.totalGross,
           rate: 0,
@@ -247,7 +332,7 @@ export default function Bpa2Page() {
           taxPeriodMonth: endMonth,
           taxPeriodYear: endYear,
           counterpartTin: resolvedTin,
-          counterpartName: name,
+          counterpartName: recipientName,
           taxObjectCode: BPA2_TAX_OBJECT.code,
           gross: calc.totalGross,
           rate: 0,
@@ -430,7 +515,7 @@ export default function Bpa2Page() {
                   <td className="text-xxs">{r.status}</td>
                   <td>
                     <div className="flex gap-2">
-                      {tab === 'BELUM_TERBIT' && r.status === 'DRAFT' && canDraftBpa2 && (
+                      {tab === 'BELUM_TERBIT' && (r.status === 'DRAFT' || r.status === 'SUBMITTED') && canDraftBpa2 && (
                         <button className="text-brand-600 hover:text-brand-800" title="Edit" onClick={() => openEdit(r)}>
                           <Pencil size={15} />
                         </button>
@@ -575,10 +660,13 @@ export default function Bpa2Page() {
                 <label className="field-label" htmlFor="psn">Previous Withholding Slip BPA1/BPA2 Number from Previous Employer (If any)</label>
                 <div className="flex gap-1">
                   <input id="psn" className="field-input" value={previousSlipNumber} onChange={(e) => setPreviousSlipNumber(e.target.value)} />
-                  <button type="button" className="btn-secondary shrink-0" title="Belum ada registry lintas pemberi kerja di simulator ini — isi manual di kolom sebelah">
+                  <button type="button" className="btn-secondary shrink-0" onClick={handleGetData}>
                     Get data
                   </button>
                 </div>
+                {getDataError && (
+                  <p role="alert" className="mt-1 text-xxs font-medium text-bad">{getDataError}</p>
+                )}
               </div>
               <div>
                 <label className="field-label" htmlFor="nifp">Net Income from Previous Withholding Slip (Rp)</label>
@@ -644,6 +732,12 @@ export default function Bpa2Page() {
                 )}
               </div>
             </div>
+
+            {validationError && (
+              <p role="alert" className="mt-3 rounded bg-bad/10 p-2 text-xxs font-medium text-bad">
+                {validationError}
+              </p>
+            )}
 
             <div className="mt-5 flex justify-end gap-2">
               <button className="btn-secondary" onClick={() => setFormOpen(false)}>Tutup</button>

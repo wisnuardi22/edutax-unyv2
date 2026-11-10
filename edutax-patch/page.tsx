@@ -1,0 +1,252 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { Eye, EyeOff, RefreshCw, Info } from 'lucide-react';
+import { addAuditEvent, loadDb, updateDb } from '@/lib/storage/db';
+import { ensureSeedData } from '@/lib/domain/portal';
+import { findStudentByNim } from '@/lib/domain/students';
+
+function makeCaptcha() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
+}
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [userId, setUserId] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+  const [captcha, setCaptcha] = useState('');
+  const [captchaInput, setCaptchaInput] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => setCaptcha(makeCaptcha()), []);
+
+  function refreshCaptcha() {
+    setCaptcha(makeCaptcha());
+    setCaptchaInput('');
+  }
+
+  function handleLogin() {
+    if (captchaInput.trim().toUpperCase() !== captcha) {
+      setError('Kode keamanan tidak cocok. Ketik ulang sesuai gambar.');
+      refreshCaptcha();
+      return;
+    }
+
+    const cleanInput = userId.trim();
+    const student = findStudentByNim(cleanInput);
+
+    // Boleh login jika NIM terdaftar di daftar mahasiswa praktikum,
+    // atau pakai fallback demo 'edutax'
+    if (!student && cleanInput !== 'edutax') {
+      setError('NIM tidak terdaftar dalam Daftar Peserta Praktikum Perpajakan.');
+      return;
+    }
+
+    const personNik = student ? student.nim : '3271022601770007';
+    const personName = student ? student.nama : 'RAKA';
+
+    updateDb((db) => {
+      db.session = {
+        personNik,
+        personName,
+        impersonatingTin: null,
+        activeNitku: null,
+        loggedInAt: new Date().toISOString(),
+      };
+      ensureSeedData(db, { nik: personNik, name: personName });
+      addAuditEvent(db, 'Login', `Masuk ke EduTax sebagai ${personName} (${personNik})`);
+    });
+    router.push('/portal');
+  }
+
+  // Sudah login sebelumnya di browser yang sama -> langsung ke portal.
+  useEffect(() => {
+    if (loadDb().session) router.replace('/portal');
+  }, [router]);
+
+  return (
+    <main className="flex min-h-screen flex-col items-center bg-canvas px-3 py-4 sm:px-4 sm:py-5">
+      <header className="mb-3 flex items-center justify-center gap-3 sm:mb-4 sm:gap-4">
+        <Image
+          src="/logo-uny.png"
+          alt=""
+          width={64}
+          height={64}
+          className="rounded-full bg-white p-1 shadow-card"
+          priority
+        />
+        <div>
+          <p className="text-3xl font-bold leading-none text-brand-800">
+            Edu<span className="text-brand-500">Tax</span>
+          </p>
+          <p className="mt-1 text-[11px] font-medium tracking-[0.18em] text-ink-muted">
+            UNIVERSITAS NEGERI YOGYAKARTA
+          </p>
+        </div>
+      </header>
+
+      <div className="grid w-full max-w-[700px] overflow-hidden rounded-card bg-white shadow-card md:h-[500px] md:grid-cols-2">
+        {/* Kolom formulir */}
+        <section className="overflow-hidden p-4 sm:p-5 md:p-5">
+          <h1 className="text-xl font-semibold leading-tight text-ink">Login</h1>
+          <p className="mt-0.5 text-[10px] font-semibold tracking-wide text-brand-600">
+            Tahap 1 — Modul Role Akses
+          </p>
+
+          <div className="mt-2.5 space-y-2">
+            <div>
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="userId">
+                ID Pengguna (NIM Mahasiswa) <span className="text-bad">*</span>
+              </label>
+              <input
+                id="userId"
+                className="field-input !py-1 text-[11px]"
+                placeholder="Masukkan 11 digit NIM Anda"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                autoComplete="username"
+              />
+            </div>
+
+            <div>
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="password">
+                Kata Sandi <span className="text-bad">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  id="password"
+                  type={showPass ? 'text' : 'password'}
+                  className="field-input !py-1 pr-10 text-[11px]"
+                  placeholder="Masukan Kata Sandi ID Pengguna Anda"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  autoComplete="current-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPass((v) => !v)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-ink-muted hover:text-brand-600"
+                  aria-label={showPass ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                >
+                  {showPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="lang">
+                Pemilihan Bahasa
+              </label>
+              <select id="lang" className="field-input !py-1 text-[11px]" defaultValue="id">
+                <option value="id">id-ID — Bahasa Indonesia</option>
+                <option value="en">en-US — English</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="field-label !mb-0.5 text-[11px]" htmlFor="captcha">
+                Kode Keamanan <span className="text-bad">*</span>
+              </label>
+              <div className="flex items-center gap-2">
+                <output className="select-none rounded-md border border-line bg-[repeating-linear-gradient(135deg,#EDF1F6_0_6px,#FFFFFF_6px_12px)] px-2 py-1 text-[11px] font-semibold tracking-[0.2em] text-ink">
+                  {captcha}
+                </output>
+                <button
+                  type="button"
+                  onClick={refreshCaptcha}
+                  className="rounded-md border border-line p-1 text-ink-muted hover:text-brand-600"
+                  aria-label="Ganti kode keamanan"
+                >
+                  <RefreshCw size={16} />
+                </button>
+                <input
+                  id="captcha"
+                  className="field-input !py-1 flex-1 text-[11px]"
+                  placeholder="Masukkan Captcha"
+                  value={captchaInput}
+                  onChange={(e) => setCaptchaInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                />
+              </div>
+            </div>
+
+            <a className="inline-block text-[11px] text-brand-500 hover:underline" href="#">
+              Lupa Kata Sandi?
+            </a>
+
+            {error && (
+              <p role="alert" className="rounded-md bg-bad/10 px-2 py-1 text-[11px] text-bad">
+                {error}
+              </p>
+            )}
+
+            <button type="button" className="btn-primary !py-1.5 w-full text-xs" onClick={handleLogin}>
+              Login
+            </button>
+
+            
+            <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
+              <p className="flex items-center gap-1.5 font-semibold">
+                <Info size={12} /> Akun Praktikum Mahasiswa UNY
+              </p>
+              <p className="mt-1">
+                Gunakan <strong>NIM Anda</strong> sebagai ID Pengguna dan kata sandi praktikum untuk masuk.
+              </p>
+              <p className="mt-1 text-xxs text-brand-700">
+                Setelah masuk, identitas akun Orang Pribadi dan dokumen simulasi otomatis terisi sesuai dengan nama dan NIM Anda masing-masing.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        {/* Kolom identitas */}
+        <aside className="relative flex min-h-[300px] flex-col justify-between overflow-hidden bg-[linear-gradient(135deg,#071d3a_0%,#0d2f5d_52%,#203d77_100%)] p-5 text-white sm:p-6 md:min-h-0">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 opacity-25
+                       [background-image:linear-gradient(to_right,rgba(255,255,255,.18)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,.18)_1px,transparent_1px)]
+                       [background-size:56px_56px]"
+          />
+          <div className="relative">
+            <span className="inline-block rounded-full bg-white/10 px-2.5 py-0.5 text-[9px] font-semibold text-accent">
+              Educational Tax Administration Simulation
+            </span>
+            <h2 className="mt-2 text-[22px] font-bold leading-tight sm:text-2xl">
+              EduTax
+              <br />
+              Educational Tax
+              <br />
+              Administration
+              <br />
+              System
+            </h2>
+            <div className="mt-3 h-1 w-20 rounded bg-accent" />
+            <p className="mt-2 max-w-sm text-[11px] leading-relaxed text-white/80">
+              Simulasi pembelajaran administrasi perpajakan untuk lingkungan akademik.
+            </p>
+          </div>
+
+          <div className="relative mt-4 flex items-center gap-2">
+            <Image
+              src="/logo-uny.png"
+              alt=""
+              width={34}
+              height={34}
+              className="rounded-full bg-white p-0.5"
+            />
+            <p className="text-[9px] font-semibold leading-tight tracking-[0.12em] text-white/90">
+              UNIVERSITAS NEGERI
+              <br />
+              YOGYAKARTA
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  );
+}

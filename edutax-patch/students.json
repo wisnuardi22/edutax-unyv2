@@ -1,0 +1,520 @@
+[
+  {
+    "no": 1,
+    "nim": "23091220020",
+    "nama": "OKTAVIANA",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 2,
+    "nim": "25091220079",
+    "nama": "Attila Fitra Dhifara",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 3,
+    "nim": "25091220090",
+    "nama": "Rafeyfa Farah Azzahra",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 4,
+    "nim": "25091220092",
+    "nama": "Riska Azahrani Putri",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 5,
+    "nim": "25091220095",
+    "nama": "Rifani Nur Hanifah",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 6,
+    "nim": "25091220098",
+    "nama": "Aurora Ardelia Putri",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 7,
+    "nim": "25091220099",
+    "nama": "Faiza Ningtyasani",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 8,
+    "nim": "25091220100",
+    "nama": "Reni Kusumawati",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 9,
+    "nim": "25091220101",
+    "nama": "Verlyta Anastasya Susanti",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 10,
+    "nim": "25091220106",
+    "nama": "Braien Rizqulloh Izzatul Aibad",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 11,
+    "nim": "25091220109",
+    "nama": "Synesius Lanang Abiyasa",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 12,
+    "nim": "25091220110",
+    "nama": "Nur Khasanah Susanti",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 13,
+    "nim": "25091220116",
+    "nama": "Fadhilla Meysi Putri",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 14,
+    "nim": "25091220117",
+    "nama": "Esa Ayu Azahra",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 15,
+    "nim": "25091220119",
+    "nama": "Davian Harisyah Putra",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 16,
+    "nim": "25091220121",
+    "nama": "Isnani Hurriyah",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 17,
+    "nim": "25091220125",
+    "nama": "Nayla Azzahra Putri",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 18,
+    "nim": "25091220146",
+    "nama": "Siti Muthmainnah Praditya Putri",
+    "kelas": "A GK",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 1,
+    "nim": "25091220062",
+    "nama": "Nailatul Aufa",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 2,
+    "nim": "25091220063",
+    "nama": "Nurul Insyiroh",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 3,
+    "nim": "25091220081",
+    "nama": "Syifanur Aini",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 4,
+    "nim": "25091220082",
+    "nama": "DILLA MURNI ROSIYANTI",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 5,
+    "nim": "25091220083",
+    "nama": "Felisia Joy Sarumaha",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 6,
+    "nim": "25091220084",
+    "nama": "Weyta Eulia Sigalingging",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 7,
+    "nim": "25091220087",
+    "nama": "Khansa Happy Viemara",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 8,
+    "nim": "25091220088",
+    "nama": "Nailah Leani Utami",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 9,
+    "nim": "25091220089",
+    "nama": "Nadiya Hasna Luthfiya Sabrina",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 10,
+    "nim": "25091220091",
+    "nama": "Muhamad Rafa Setyawan",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 11,
+    "nim": "25091220096",
+    "nama": "Aulia Sri Lestari",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 12,
+    "nim": "25091220104",
+    "nama": "Rahel Febi Vinachiaro Sitorus",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 13,
+    "nim": "25091220108",
+    "nama": "Laila Fanesha Putri",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 14,
+    "nim": "25091220112",
+    "nama": "Meiva Wulandari",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 15,
+    "nim": "25091220113",
+    "nama": "Najwa Lukluk Ul'ilma Syah Putrie",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 16,
+    "nim": "25091220114",
+    "nama": "Sifa Alika Meysiana",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 17,
+    "nim": "25091220118",
+    "nama": "Arda Ariansyah Harya Atmadja",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 18,
+    "nim": "25091220122",
+    "nama": "Tabitha Florencia Natali Hutabarat",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 19,
+    "nim": "25091220124",
+    "nama": "Luisa Indah Rahmawati",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 20,
+    "nim": "25091220126",
+    "nama": "Dinda Agisnawati Hutabarat",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 21,
+    "nim": "25091220128",
+    "nama": "Ismi Amaliah",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 22,
+    "nim": "25091220131",
+    "nama": "Aisyah Inas Tsabita",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 23,
+    "nim": "25091220134",
+    "nama": "Mohammad Wildan Khuzaeni",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 24,
+    "nim": "25091220136",
+    "nama": "Nofika Izzatunisa",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 25,
+    "nim": "25091220138",
+    "nama": "Della Ahya Sabila Rohmad",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 26,
+    "nim": "25091220143",
+    "nama": "Raissa Nuria Indriatmoko",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 27,
+    "nim": "25091220144",
+    "nama": "Fathin Haya Aliifah",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 28,
+    "nim": "25091220147",
+    "nama": "AULIA AINUN NAFISAH",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 29,
+    "nim": "25091220149",
+    "nama": "Farah Nafiah Widyaningsih",
+    "kelas": "A",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 1,
+    "nim": "25091220078",
+    "nama": "Ravika Reista Amelia",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 2,
+    "nim": "25091220080",
+    "nama": "Sabrina Jasmine",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 3,
+    "nim": "25091220085",
+    "nama": "M. Asbend Turawi",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 4,
+    "nim": "25091220086",
+    "nama": "Siti Aisyah",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 5,
+    "nim": "25091220093",
+    "nama": "Syila Silviana",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 6,
+    "nim": "25091220094",
+    "nama": "Ahmad Althaf Hadikusuma",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 7,
+    "nim": "25091220097",
+    "nama": "Citra Amelia Putri",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 8,
+    "nim": "25091220102",
+    "nama": "Yufal Aulia Al Fahsya",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 9,
+    "nim": "25091220103",
+    "nama": "Danu Widyantoro",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 10,
+    "nim": "25091220105",
+    "nama": "Joe Fanka De Lovely Muhammad",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 11,
+    "nim": "25091220107",
+    "nama": "Risma Nur Istiqomah",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 12,
+    "nim": "25091220111",
+    "nama": "Fedelis Imas Tri Pamungkas",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 13,
+    "nim": "25091220115",
+    "nama": "Pramesty Hapsary",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 14,
+    "nim": "25091220120",
+    "nama": "Desli Aulia Putri",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 15,
+    "nim": "25091220123",
+    "nama": "Nauval Ulul Azmi",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 16,
+    "nim": "25091220127",
+    "nama": "Alya Zahfira Putri",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 17,
+    "nim": "25091220130",
+    "nama": "Kefas Binsartua Febriano Marpaung",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 18,
+    "nim": "25091220132",
+    "nama": "Dea Ayu Karikavita",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 19,
+    "nim": "25091220133",
+    "nama": "Ratu Darani Fatwa Ahlullah",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 20,
+    "nim": "25091220135",
+    "nama": "Ranni Diana Rosyda",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 21,
+    "nim": "25091220137",
+    "nama": "Viviana Ajeng Prasivi",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 22,
+    "nim": "25091220139",
+    "nama": "Ibnu Al Falaq",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 23,
+    "nim": "25091220140",
+    "nama": "Afifah Huwaida Khansa",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 24,
+    "nim": "25091220141",
+    "nama": "Sophia Rahmi Batubara",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 25,
+    "nim": "25091220142",
+    "nama": "M. Akbar Alfattah Rohman",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 26,
+    "nim": "25091220145",
+    "nama": "Alya Nabila",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  },
+  {
+    "no": 27,
+    "nim": "25091220148",
+    "nama": "Nizar Ahsan Afada",
+    "kelas": "B",
+    "prodi": "AKUNTANSI-D4"
+  }
+]

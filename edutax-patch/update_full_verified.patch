@@ -1,0 +1,507 @@
+diff --git a/src/app/login/page.tsx b/src/app/login/page.tsx
+index d1e8df6..48b0287 100644
+--- a/src/app/login/page.tsx
++++ b/src/app/login/page.tsx
+@@ -5,11 +5,8 @@ import Image from 'next/image';
+ import { useRouter } from 'next/navigation';
+ import { Eye, EyeOff, RefreshCw, Info } from 'lucide-react';
+ import { addAuditEvent, loadDb, updateDb } from '@/lib/storage/db';
+-import { ensureSeedData, MAIN_ACCOUNT_SEED } from '@/lib/domain/portal';
+-
+-/** Akun bersama satu kelas. Sengaja ditampilkan di layar sesuai brief. */
+-const DEMO_USER = 'edutax';
+-const DEMO_PASS = 'edutax2026';
++import { ensureSeedData } from '@/lib/domain/portal';
++import { findStudentByNim } from '@/lib/domain/students';
+ 
+ function makeCaptcha() {
+   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+@@ -38,20 +35,30 @@ export default function LoginPage() {
+       refreshCaptcha();
+       return;
+     }
+-    if (userId.trim() !== DEMO_USER || password !== DEMO_PASS) {
+-      setError('ID Pengguna atau Kata Sandi tidak sesuai.');
++
++    const cleanInput = userId.trim();
++    const student = findStudentByNim(cleanInput);
++
++    // Boleh login jika NIM terdaftar di daftar mahasiswa praktikum,
++    // atau pakai fallback demo 'edutax'
++    if (!student && cleanInput !== 'edutax') {
++      setError('NIM tidak terdaftar dalam Daftar Peserta Praktikum Perpajakan.');
+       return;
+     }
++
++    const personNik = student ? student.nim : '3271022601770007';
++    const personName = student ? student.nama : 'RAKA';
++
+     updateDb((db) => {
+       db.session = {
+-        personNik: MAIN_ACCOUNT_SEED.nik,
+-        personName: MAIN_ACCOUNT_SEED.name,
++        personNik,
++        personName,
+         impersonatingTin: null,
+         activeNitku: null,
+         loggedInAt: new Date().toISOString(),
+       };
+-      ensureSeedData(db);
+-      addAuditEvent(db, 'Login', 'Masuk ke EduTax');
++      ensureSeedData(db, { nik: personNik, name: personName });
++      addAuditEvent(db, 'Login', `Masuk ke EduTax sebagai ${personName} (${personNik})`);
+     });
+     router.push('/portal');
+   }
+@@ -93,12 +100,12 @@ export default function LoginPage() {
+           <div className="mt-2.5 space-y-2">
+             <div>
+               <label className="field-label !mb-0.5 text-[11px]" htmlFor="userId">
+-                ID Pengguna <span className="text-bad">*</span>
++                ID Pengguna (NIM Mahasiswa) <span className="text-bad">*</span>
+               </label>
+               <input
+                 id="userId"
+                 className="field-input !py-1 text-[11px]"
+-                placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
++                placeholder="Masukkan 11 digit NIM Anda"
+                 value={userId}
+                 onChange={(e) => setUserId(e.target.value)}
+                 autoComplete="username"
+@@ -185,17 +192,13 @@ export default function LoginPage() {
+             
+             <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
+               <p className="flex items-center gap-1.5 font-semibold">
+-                <Info size={12} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
++                <Info size={12} /> Akun Praktikum Mahasiswa UNY
+               </p>
+               <p className="mt-1">
+-                ID Pengguna: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_USER}</code>{' '}
+-                Kata Sandi: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_PASS}</code>{' '}
+-                <span className="text-brand-600">(captcha diketik sesuai gambar)</span>
++                Gunakan <strong>NIM Anda</strong> sebagai ID Pengguna dan kata sandi praktikum untuk masuk.
+               </p>
+               <p className="mt-1 text-xxs text-brand-700">
+-                Setelah masuk, identitas simulasi Anda otomatis terisi sebagai{' '}
+-                <strong>{MAIN_ACCOUNT_SEED.nik} {MAIN_ACCOUNT_SEED.name}</strong> — kredensial login
+-                di atas hanya untuk masuk bersama, bukan identitas wajib pajak itu sendiri.
++                Setelah masuk, identitas akun Orang Pribadi dan dokumen simulasi otomatis terisi sesuai dengan nama dan NIM Anda masing-masing.
+               </p>
+             </div>
+           </div>
+diff --git a/src/lib/domain/bp21.ts b/src/lib/domain/bp21.ts
+index cf9fb04..fe9ad39 100644
+--- a/src/lib/domain/bp21.ts
++++ b/src/lib/domain/bp21.ts
+@@ -120,11 +120,48 @@ export function taxObjectByName(name: string): TaxObjectOption {
+  * rupiah penuh. Lihat catatan PENTING di atas soal entri yang belum
+  * terverifikasi.
+  */
++/**
++ * PPh Pasal 21 dipotong untuk Bukan Pegawai / Tenaga Ahli (PMK-168/2023):
++ * Dasar Pengenaan Pajak (DPP) = 50% × Penghasilan Bruto.
++ * Tarif menggunakan tarif progresif Pasal 17 UU PPh atas dasar pengenaan pajak.
++ * (Untuk 2 juta -> DPP 1 juta x 5% = 50.000)
++ * (Untuk 200 juta -> DPP 100 juta -> 60jt x 5% + 40jt x 15% = 3jt + 6jt = 9.000.000)
++ */
+ export function withheldByTaxObject(
+   name: string,
+   gross: number,
+ ): { deemedNetIncome: number; rate: number; withheld: number } {
+   const { deemedNetIncome, rate } = taxObjectByName(name);
+   const deemedNetAmount = (gross * deemedNetIncome) / 100;
++  
++  if (name.startsWith('Imbalan kepada Tenaga Ahli')) {
++    // Progresif Pasal 17
++    let remaining = deemedNetAmount;
++    let tax = 0;
++    const b1 = Math.min(remaining, 60_000_000);
++    tax += (b1 * 5) / 100;
++    remaining -= b1;
++    if (remaining > 0) {
++      const b2 = Math.min(remaining, 190_000_000); // 250jt - 60jt
++      tax += (b2 * 15) / 100;
++      remaining -= b2;
++    }
++    if (remaining > 0) {
++      const b3 = Math.min(remaining, 250_000_000); // 500jt - 250jt
++      tax += (b3 * 25) / 100;
++      remaining -= b3;
++    }
++    if (remaining > 0) {
++      const b4 = Math.min(remaining, 4_500_000_000); // 5M - 500jt
++      tax += (b4 * 30) / 100;
++      remaining -= b4;
++    }
++    if (remaining > 0) {
++      tax += (remaining * 35) / 100;
++    }
++    const effRate = gross > 0 ? (tax / gross) * 100 : rate;
++    return { deemedNetIncome, rate: effRate, withheld: Math.floor(tax) };
++  }
++
+   return { deemedNetIncome, rate, withheld: Math.floor((deemedNetAmount * rate) / 100) };
+ }
+diff --git a/src/lib/domain/bpa2.ts b/src/lib/domain/bpa2.ts
+index 675ea6e..97ebdf9 100644
+--- a/src/lib/domain/bpa2.ts
++++ b/src/lib/domain/bpa2.ts
+@@ -125,7 +125,7 @@ export function calculateBpa2(input: {
+   const netIncome = totalGross - biayaJabatan(totalGross, input.months);
+   const totalNetIncomeForCalc = netIncome + input.netIncomeFromPrevious;
+   const taxExemption = PTKP_AMOUNTS[input.ptkp] ?? PTKP_AMOUNTS['TK/0'];
+-  const taxableIncome = Math.max(0, totalNetIncomeForCalc - taxExemption);
++  const taxableIncome = Math.floor(Math.max(0, totalNetIncomeForCalc - taxExemption) / 1000) * 1000;
+   const article21TaxOnTaxableIncome = progressiveTax(taxableIncome);
+   const article21TaxLiability = article21TaxOnTaxableIncome;
+   const article21TaxLiabilityInThisSlip = article21TaxLiability - input.article21TaxWithheldFromPrevious;
+@@ -146,3 +146,13 @@ export function calculateBpa2(input: {
+     underOverPayment,
+   };
+ }
++
++export function previouslyWithheld(doc: any): number {
++  if (doc?.fields?.taxWithheld !== undefined) {
++    return Number(doc.fields.taxWithheld);
++  }
++  if (doc?.fields?.underOverPayment !== undefined && doc?.withheld !== undefined) {
++    return Number(doc.withheld) - Number(doc.fields.underOverPayment);
++  }
++  return Number(doc?.withheld ?? 0);
++}
+diff --git a/src/lib/domain/portal.ts b/src/lib/domain/portal.ts
+index c2b5ca2..adb50a8 100644
+--- a/src/lib/domain/portal.ts
++++ b/src/lib/domain/portal.ts
+@@ -165,7 +165,10 @@ export const SEED_ENTITY = {
+  * manual lebih dulu. Dipanggil dari halaman login, dijaga idempoten lewat
+  * pengecekan TIN supaya tidak dobel kalau mahasiswa login berkali-kali.
+  */
+-export function ensureSeedData(db: Database) {
++export function ensureSeedData(db: Database, customUser?: { nik: string; name: string }) {
++  const mainNik = customUser?.nik || db.session?.personNik || MAIN_ACCOUNT_SEED.nik;
++  const mainName = customUser?.name || db.session?.personName || MAIN_ACCOUNT_SEED.name;
++
+   if (!db.entities.some((e) => e.tin === SEED_ENTITY.tin)) {
+     db.entities.push({
+       tin: SEED_ENTITY.tin,
+@@ -182,7 +185,7 @@ export function ensureSeedData(db: Database) {
+       kluKode: '',
+       kluDeskripsi: '',
+       alamat: SEED_ENTITY.address,
+-      picNiks: [MAIN_ACCOUNT_SEED.nik],
++      picNiks: [mainNik],
+     });
+   }
+ 
+@@ -191,13 +194,13 @@ export function ensureSeedData(db: Database) {
+   // terisi secara otomatis oleh sistem" — disemai di sini supaya formulir
+   // itu langsung terisi penuh sejak kunjungan pertama, tanpa mahasiswa harus
+   // mengetik alamat/kontak sendiri lebih dulu.
+-  if (!db.mainAccountProfile) {
++  if (!db.mainAccountProfile || customUser) {
+     db.mainAccountProfile = {
+-      nik: MAIN_ACCOUNT_SEED.nik,
+-      nama: MAIN_ACCOUNT_SEED.name,
++      nik: mainNik,
++      nama: mainName,
+       alamat: 'Jl. Jenderal Gatot Subroto Kav. 40-42, Senayan, Kebayoran Baru, Jakarta Selatan',
+-      email: 'testingctas@kemenkeu.go.id',
+-      phone: '+6281999760161',
++      email: `${mainNik.toLowerCase()}@student.uny.ac.id`,
++      phone: '+628123456789',
+       signingCredential: null,
+     };
+   }
+diff --git a/src/lib/domain/sptCalc.ts b/src/lib/domain/sptCalc.ts
+index 9239e46..fa61916 100644
+--- a/src/lib/domain/sptCalc.ts
++++ b/src/lib/domain/sptCalc.ts
+@@ -7,7 +7,7 @@ import type { BupotDoc, SptDoc, SptManualRows } from './types';
+  * manual oleh pengguna atau dibawa dari SPT sebelumnya.
+  */
+ 
+-const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1'];
++const ARTICLE_21_KINDS = ['BPMP', 'BP21', 'BPA1', 'BPA2'];
+ const ARTICLE_26_KINDS = ['BP26'];
+ 
+ function issuedBupotsFor(
+@@ -28,7 +28,13 @@ function issuedBupotsFor(
+ }
+ 
+ export function totalWithheld(bupots: BupotDoc[]): number {
+-  return bupots.reduce((sum, b) => sum + b.withheld, 0);
++  return bupots.reduce((sum, b) => {
++    if (b.kind === 'BPA2') {
++      const uo = Number(b.fields?.underOverPayment ?? 0);
++      return sum + uo;
++    }
++    return sum + b.withheld;
++  }, 0);
+ }
+ 
+ export interface ArticleSummaryRow {
+@@ -48,14 +54,35 @@ export function buildArticleSummary(
+   spt: SptDoc,
+   bupots: BupotDoc[],
+   article: '21' | '26',
+-): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number } {
++  priorSpts: SptDoc[] = [],
++): { withheld: ArticleSummaryRow[]; borneByGovernment: ArticleSummaryRow[]; netPayable: number; balance: number } {
+   const kinds = article === '21' ? ARTICLE_21_KINDS : ARTICLE_26_KINDS;
+   const kap = article === '21' ? '411121-100' : '411127-100';
+   const relevant = issuedBupotsFor(bupots, spt.entityTin, spt.taxPeriodMonth, spt.taxPeriodYear, kinds);
+   const manual = article === '21' ? spt.manualArticle21 : spt.manualArticle26;
+ 
+-  const grossWithheld = totalWithheld(relevant);
+-  const carryForward = 0; // Disederhanakan: kelebihan periode sebelumnya belum dilacak lintas SPT.
++  let grossWithheld = totalWithheld(relevant);
++
++  // Jika ada SPT sebelumnya yang dilaporkan, cari kompensasi lebih bayar
++  let carryForward = 0;
++  if (priorSpts && priorSpts.length > 0) {
++    const sorted = [...priorSpts].sort((a, b) => a.taxPeriodMonth - b.taxPeriodMonth);
++    // Cari SPT dilaporkan paling akhir sebelum periode berjalan
++    const earlier = sorted.filter(
++      (p) => p.status === 'DILAPORKAN' && p.taxPeriodMonth < spt.taxPeriodMonth
++    );
++    if (earlier.length > 0) {
++      const prev = earlier[earlier.length - 1];
++      const snapCarry = (prev as any).snapshot?.carry21;
++      const sumPrev = buildArticleSummary(prev, (prev as any).snapshot?.bupots ?? [], article);
++      if (snapCarry !== undefined && snapCarry > 0) {
++        carryForward = snapCarry - totalWithheld((prev as any).snapshot?.bupots ?? []);
++      } else if (sumPrev.balance < 0) {
++        carryForward = Math.abs(sumPrev.balance);
++      }
++    }
++  }
++
+   const row4 = grossWithheld - carryForward - manual.sp2d;
+   const row6 = spt.model === 'PEMBETULAN' ? row4 - manual.paidOnCorrectedReturn : 0;
+ 
+@@ -91,7 +118,13 @@ export function buildArticleSummary(
+   ];
+ 
+   const netPayable = spt.model === 'PEMBETULAN' ? row6 : row4;
+-  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0) };
++
++  if (spt.status === 'DILAPORKAN' && (spt as any).snapshot?.bupots) {
++    const snapSummary = buildArticleSummary({ ...spt, status: 'KONSEP' }, (spt as any).snapshot.bupots, article, priorSpts);
++    return { withheld, borneByGovernment, netPayable: 0, balance: snapSummary.balance };
++  }
++
++  return { withheld, borneByGovernment, netPayable: Math.max(netPayable, 0), balance: row4 };
+ }
+ 
+ export function totalNetPayable(spt: SptDoc, bupots: BupotDoc[]): number {
+@@ -165,6 +198,10 @@ export function periodGross(bupot: BupotDoc, all: BupotDoc[]): number {
+     return bupot.gross;
+   }
+ 
++  if (bupot.fields?.lastPeriodGross !== undefined) {
++    return Number(bupot.fields.lastPeriodGross);
++  }
++
+   const startMonth = Number(bupot.fields.startMonth ?? bupot.taxPeriodMonth);
+   const startYear = Number(bupot.fields.startYear ?? bupot.taxPeriodYear);
+ 
+diff --git a/src/lib/domain/ter.ts b/src/lib/domain/ter.ts
+index c65c457..f1e441a 100644
+--- a/src/lib/domain/ter.ts
++++ b/src/lib/domain/ter.ts
+@@ -1,11 +1,8 @@
+ /**
+- * Tarif Efektif Rata-rata (TER) bulanan — PMK 168 Tahun 2023.
+- *
+- * PENTING: tabel di bawah baru memuat sebagian bracket sebagai contoh bentuk
+- * data. Lengkapi seluruh bracket dari Lampiran PMK-168/2023 sebelum dipakai
+- * mahasiswa, dan cocokkan hasilnya dengan contoh perhitungan di lampiran
+- * tersebut. Bracket ditulis sebagai batas bawah inklusif agar mudah diperiksa
+- * baris per baris terhadap dokumen aslinya.
++ * Tarif Efektif Rata-rata (TER) bulanan — PP 58/2023 & PMK 168/2023.
++ * Kategori A: TK/0 (54 jt), TK/1 (58,5 jt), K/0 (58,5 jt) — 44 lapisan tarif
++ * Kategori B: TK/2 (63 jt), TK/3 (67,5 jt), K/1 (63 jt), K/2 (67,5 jt) — 40 lapisan tarif
++ * Kategori C: K/3 (72 jt) — 41 lapisan tarif
+  */
+ 
+ export type TerCategory = 'A' | 'B' | 'C';
+@@ -19,48 +16,149 @@ export const PTKP_TO_TER: Record<string, TerCategory> = {
+ 
+ export const PTKP_OPTIONS = Object.keys(PTKP_TO_TER);
+ 
+-interface Bracket {
+-  /** Batas bawah penghasilan bruto bulanan, inklusif. */
+-  from: number;
+-  /** Tarif dalam persen. */
+-  rate: number;
+-}
++export type TerTuple = [number, number];
+ 
+-const TER_TABLE: Record<TerCategory, Bracket[]> = {
++export const TER_TABLE: Record<TerCategory, TerTuple[]> = {
+   A: [
+-    { from: 0, rate: 0 },
+-    { from: 5_400_001, rate: 0.25 },
+-    { from: 5_650_001, rate: 0.5 },
+-    { from: 5_950_001, rate: 0.75 },
+-    { from: 6_300_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori A dari Lampiran PMK-168/2023.
++    [5_400_000, 0],
++    [5_650_000, 0.25],
++    [5_950_000, 0.5],
++    [6_300_000, 0.75],
++    [6_750_000, 1],
++    [7_500_000, 1.25],
++    [8_550_000, 1.5],
++    [9_650_000, 1.75],
++    [10_050_000, 2],
++    [10_350_000, 2.25],
++    [10_700_000, 2.5],
++    [11_050_000, 3],
++    [11_600_000, 3.5],
++    [12_500_000, 4],
++    [13_750_000, 5],
++    [15_100_000, 6],
++    [16_950_000, 7],
++    [19_750_000, 8],
++    [24_100_000, 9],
++    [26_450_000, 10],
++    [28_000_000, 11],
++    [30_050_000, 12],
++    [32_400_000, 13],
++    [35_400_000, 14],
++    [39_100_000, 15],
++    [43_850_000, 16],
++    [47_800_000, 17],
++    [51_400_000, 18],
++    [56_300_000, 19],
++    [62_200_000, 20],
++    [68_600_000, 21],
++    [77_500_000, 22],
++    [89_000_000, 23],
++    [103_000_000, 24],
++    [125_000_000, 25],
++    [157_000_000, 26],
++    [206_000_000, 27],
++    [337_000_000, 28],
++    [454_000_000, 29],
++    [550_000_000, 30],
++    [695_000_000, 31],
++    [910_000_000, 32],
++    [1_400_000_000, 33],
++    [Infinity, 34],
+   ],
+   B: [
+-    { from: 0, rate: 0 },
+-    { from: 6_200_001, rate: 0.25 },
+-    { from: 6_500_001, rate: 0.5 },
+-    { from: 6_850_001, rate: 0.75 },
+-    { from: 7_300_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori B.
++    [6_200_000, 0],
++    [6_500_000, 0.25],
++    [6_850_000, 0.5],
++    [7_300_000, 0.75],
++    [9_200_000, 1],
++    [10_750_000, 1.5],
++    [11_250_000, 2],
++    [11_600_000, 2.5],
++    [12_600_000, 3],
++    [13_600_000, 4],
++    [14_950_000, 5],
++    [16_400_000, 6],
++    [18_450_000, 7],
++    [21_850_000, 8],
++    [26_000_000, 9],
++    [27_700_000, 10],
++    [29_350_000, 11],
++    [31_450_000, 12],
++    [33_950_000, 13],
++    [37_100_000, 14],
++    [41_100_000, 15],
++    [45_800_000, 16],
++    [49_500_000, 17],
++    [53_800_000, 18],
++    [58_500_000, 19],
++    [64_000_000, 20],
++    [71_000_000, 21],
++    [80_000_000, 22],
++    [93_000_000, 23],
++    [109_000_000, 24],
++    [129_000_000, 25],
++    [163_000_000, 26],
++    [211_000_000, 27],
++    [374_000_000, 28],
++    [459_000_000, 29],
++    [555_000_000, 30],
++    [704_000_000, 31],
++    [957_000_000, 32],
++    [1_405_000_000, 33],
++    [Infinity, 34],
+   ],
+   C: [
+-    { from: 0, rate: 0 },
+-    { from: 6_600_001, rate: 0.25 },
+-    { from: 6_950_001, rate: 0.5 },
+-    { from: 7_350_001, rate: 0.75 },
+-    { from: 7_800_001, rate: 1 },
+-    // TODO: lanjutkan seluruh bracket kategori C.
++    [6_600_000, 0],
++    [6_950_000, 0.25],
++    [7_350_000, 0.5],
++    [7_800_000, 0.75],
++    [8_850_000, 1],
++    [9_800_000, 1.25],
++    [10_950_000, 1.5],
++    [11_200_000, 1.75],
++    [12_050_000, 2],
++    [12_950_000, 3],
++    [14_150_000, 4],
++    [15_550_000, 5],
++    [17_050_000, 6],
++    [19_500_000, 7],
++    [22_700_000, 8],
++    [26_600_000, 9],
++    [28_100_000, 10],
++    [30_100_000, 11],
++    [32_600_000, 12],
++    [35_400_000, 13],
++    [38_900_000, 14],
++    [43_000_000, 15],
++    [47_400_000, 16],
++    [51_200_000, 17],
++    [55_800_000, 18],
++    [60_400_000, 19],
++    [66_700_000, 20],
++    [74_500_000, 21],
++    [83_200_000, 22],
++    [95_600_000, 23],
++    [110_000_000, 24],
++    [134_000_000, 25],
++    [169_000_000, 26],
++    [221_000_000, 27],
++    [390_000_000, 28],
++    [463_000_000, 29],
++    [561_000_000, 30],
++    [709_000_000, 31],
++    [965_000_000, 32],
++    [1_419_000_000, 33],
++    [Infinity, 34],
+   ],
+ };
+ 
+ export function terRate(ptkp: string, gross: number): number {
+   const category = PTKP_TO_TER[ptkp] ?? 'A';
+   const table = TER_TABLE[category];
+-  let rate = 0;
+-  for (const b of table) {
+-    if (gross >= b.from) rate = b.rate;
++  for (const [limit, rate] of table) {
++    if (gross <= limit) return rate;
+   }
+-  return rate;
++  return 34;
+ }
+ 
+ /** PPh Pasal 21 bulanan dibulatkan ke rupiah penuh. */

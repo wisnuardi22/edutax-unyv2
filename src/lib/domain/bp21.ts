@@ -120,11 +120,48 @@ export function taxObjectByName(name: string): TaxObjectOption {
  * rupiah penuh. Lihat catatan PENTING di atas soal entri yang belum
  * terverifikasi.
  */
+/**
+ * PPh Pasal 21 dipotong untuk Bukan Pegawai / Tenaga Ahli (PMK-168/2023):
+ * Dasar Pengenaan Pajak (DPP) = 50% × Penghasilan Bruto.
+ * Tarif menggunakan tarif progresif Pasal 17 UU PPh atas dasar pengenaan pajak.
+ * (Untuk 2 juta -> DPP 1 juta x 5% = 50.000)
+ * (Untuk 200 juta -> DPP 100 juta -> 60jt x 5% + 40jt x 15% = 3jt + 6jt = 9.000.000)
+ */
 export function withheldByTaxObject(
   name: string,
   gross: number,
 ): { deemedNetIncome: number; rate: number; withheld: number } {
   const { deemedNetIncome, rate } = taxObjectByName(name);
   const deemedNetAmount = (gross * deemedNetIncome) / 100;
+  
+  if (name.startsWith('Imbalan kepada Tenaga Ahli')) {
+    // Progresif Pasal 17
+    let remaining = deemedNetAmount;
+    let tax = 0;
+    const b1 = Math.min(remaining, 60_000_000);
+    tax += (b1 * 5) / 100;
+    remaining -= b1;
+    if (remaining > 0) {
+      const b2 = Math.min(remaining, 190_000_000); // 250jt - 60jt
+      tax += (b2 * 15) / 100;
+      remaining -= b2;
+    }
+    if (remaining > 0) {
+      const b3 = Math.min(remaining, 250_000_000); // 500jt - 250jt
+      tax += (b3 * 25) / 100;
+      remaining -= b3;
+    }
+    if (remaining > 0) {
+      const b4 = Math.min(remaining, 4_500_000_000); // 5M - 500jt
+      tax += (b4 * 30) / 100;
+      remaining -= b4;
+    }
+    if (remaining > 0) {
+      tax += (remaining * 35) / 100;
+    }
+    const effRate = gross > 0 ? (tax / gross) * 100 : rate;
+    return { deemedNetIncome, rate: effRate, withheld: Math.floor(tax) };
+  }
+
   return { deemedNetIncome, rate, withheld: Math.floor((deemedNetAmount * rate) / 100) };
 }

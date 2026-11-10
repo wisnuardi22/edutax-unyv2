@@ -9,6 +9,7 @@ import type { CertificateProvider, DaftarIISetorSendiriRow, SptDoc, SptManualRow
 import type { Database } from '@/lib/storage/db';
 import { canDraftSpt, canSignSpt, explainDeniedSpt } from '@/lib/auth/access';
 import { BPPU_ARTICLE_LABEL } from '@/lib/domain/bppu';
+import { BupotAnnex } from '@/components/ui/BupotAnnex';
 
 /**
  * Halaman isi SPT Masa PPh Pasal 21/26. Lima tab dan susunan bagian mengikuti
@@ -30,6 +31,47 @@ type TabKey = 'UTAMA' | 'L-IA' | 'L-IB' | 'L-II' | 'L-III';
 const TABS: TabKey[] = ['UTAMA', 'L-IA', 'L-IB', 'L-II', 'L-III'];
 
 const rupiah = (n: number) => n.toLocaleString('id-ID');
+
+function downloadBillingPdf(billing: { kodeBilling: string; kapKjs: string; masaPajak: string; nominal: number; expiresAt: string }) {
+  const content = `%PDF-1.4
+1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj
+2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj
+3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj
+4 0 obj << /Length 260 >> stream
+BT
+/F1 18 Tf
+50 720 Td (CETAKAN KODE BILLING PAJAK) Tj
+/F1 12 Tf
+0 -30 Td (Kode Billing: ${billing.kodeBilling}) Tj
+0 -20 Td (KAP/KJS: ${billing.kapKjs}) Tj
+0 -20 Td (Masa Pajak: ${billing.masaPajak}) Tj
+0 -20 Td (Nominal: Rp ${billing.nominal.toLocaleString('id-ID')}) Tj
+0 -20 Td (Berlaku Hingga: ${new Date(billing.expiresAt).toLocaleDateString('id-ID')}) Tj
+ET
+endstream endobj
+5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj
+xref
+0 6
+0000000000 65535 f 
+0000000010 00000 n 
+0000000060 00000 n 
+0000000117 00000 n 
+0000000244 00000 n 
+0000000555 00000 n 
+trailer << /Size 6 /Root 1 0 R >>
+startxref
+626
+%%EOF`;
+  const blob = new Blob([content], { type: 'application/pdf' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `billing-${billing.kodeBilling}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 export default function SptEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -106,10 +148,22 @@ export default function SptEditorPage() {
 
   function submit(password: string, provider: CertificateProvider) {
     if (!password || !canSignSptRole) return;
+    let createdBilling: any = null;
     mutate((d) => {
       const s = d.spts.find((x) => x.id === id);
       if (!s) return;
       s.signature = { provider, signerNik: d.session!.personNik, signedAt: new Date().toISOString() };
+      const relevant = d.bupots.filter(
+        (b) =>
+          b.entityTin === s.entityTin &&
+          b.status === 'ISSUED' &&
+          b.taxPeriodYear === s.taxPeriodYear &&
+          (b.taxPeriodMonth === s.taxPeriodMonth || (b.kind === 'BPA2' && b.taxPeriodMonth === s.taxPeriodMonth)),
+      );
+      (s as any).snapshot = {
+        bupots: relevant,
+        reportedAt: new Date().toISOString(),
+      };
       if (net > 0) {
         s.status = 'MENUNGGU_PEMBAYARAN';
         const created = new Date();
@@ -122,12 +176,16 @@ export default function SptEditorPage() {
           createdAt: created.toISOString(),
           expiresAt: expires.toISOString(),
         };
+        createdBilling = s.billing;
       } else {
         s.status = 'DILAPORKAN';
         s.submittedAt = new Date().toISOString();
       }
     });
     setSigning(false);
+    if (createdBilling) {
+      downloadBillingPdf(createdBilling);
+    }
     setNotice(
       net > 0
         ? 'Dokumen berhasil ditandatangani. Kode billing telah terbit — selesaikan pembayaran pada tab SPT Menunggu Pembayaran.'
@@ -286,32 +344,46 @@ export default function SptEditorPage() {
         )}
 
         {tab === 'L-IB' && (
-          <>
-            {!isLastPeriod && (
-              <p className="mt-4 rounded-md border border-line bg-canvas px-3 py-2 text-[13px] text-ink-muted">
-                Lampiran ini hanya diisi untuk SPT Masa pajak terakhir (Desember).
-              </p>
+          <BupotAnnex
+            title="Daftar Pemotongan PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan untuk Masa Pajak Terakhir"
+            rows={bupots.filter(
+              (b) =>
+                b.entityTin === spt.entityTin &&
+                b.status === 'ISSUED' &&
+                (b.kind === 'BPA1' || b.kind === 'BPA2') &&
+                b.taxPeriodMonth === spt.taxPeriodMonth &&
+                b.taxPeriodYear === spt.taxPeriodYear,
             )}
-            <LampiranBulanan
-              judul="Daftar Pemotongan PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan untuk Masa Pajak Terakhir"
-              entityTin={spt.entityTin}
-              month={spt.taxPeriodMonth}
-              year={spt.taxPeriodYear}
-              rows={isLastPeriod ? bpmpRows : []}
-            />
-          </>
+            lastPeriod={true}
+            all={bupots}
+          />
         )}
 
         {tab === 'L-II' && (
-          <LampiranTahunan entityTin={spt.entityTin} year={spt.taxPeriodYear} bupots={bupots} />
+          <BupotAnnex
+            title="Daftar Pemotongan Satu Tahun Pajak PPh Pasal 21 bagi Pegawai Tetap dan Pensiunan"
+            rows={bupots.filter(
+              (b) =>
+                b.entityTin === spt.entityTin &&
+                b.status === 'ISSUED' &&
+                (b.kind === 'BPA1' || b.kind === 'BPA2') &&
+                b.taxPeriodYear === spt.taxPeriodYear,
+            )}
+            annual={true}
+          />
         )}
 
         {tab === 'L-III' && (
-          <LampiranSelainPegawaiTetap
-            entityTin={spt.entityTin}
-            month={spt.taxPeriodMonth}
-            year={spt.taxPeriodYear}
-            bupots={bupots}
+          <BupotAnnex
+            title="Daftar Pemotongan PPh Pasal 21/26 Selain Pegawai Tetap"
+            rows={bupots.filter(
+              (b) =>
+                b.entityTin === spt.entityTin &&
+                b.status === 'ISSUED' &&
+                (b.kind === 'BP21' || b.kind === 'BP26') &&
+                b.taxPeriodMonth === spt.taxPeriodMonth &&
+                b.taxPeriodYear === spt.taxPeriodYear,
+            )}
           />
         )}
       </section>
@@ -320,6 +392,7 @@ export default function SptEditorPage() {
         <SignDialog
           signerNik={db.session!.personNik}
           credential={db.mainAccountProfile?.signingCredential ?? null}
+          requireSave={true}
           onCancel={() => setSigning(false)}
           onConfirm={submit}
         />
@@ -479,9 +552,14 @@ function BillingCard({
       <p className="mt-1 text-xxs text-ink-muted">
         Berlaku sampai {new Date(billing.expiresAt).toLocaleString('id-ID')}
       </p>
-      <button className="btn-primary mt-3" onClick={onPay} disabled={disabled}>
-        Simulasikan Pembayaran
-      </button>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button className="btn-primary" onClick={onPay} disabled={disabled}>
+          Simulasikan Pembayaran
+        </button>
+        <button className="btn-secondary" onClick={() => downloadBillingPdf(billing)}>
+          Unduh Billing (PDF)
+        </button>
+      </div>
       <p className="mt-1 text-xxs text-ink-muted">
         Di Coretax, pembayaran nyata dilakukan lewat bank/pos dan status berubah otomatis tanpa input NTPN.
         Tombol ini menyingkat langkah tersebut untuk keperluan praktikum.

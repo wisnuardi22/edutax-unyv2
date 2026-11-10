@@ -5,11 +5,8 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, RefreshCw, Info } from 'lucide-react';
 import { addAuditEvent, loadDb, updateDb } from '@/lib/storage/db';
-import { ensureSeedData, MAIN_ACCOUNT_SEED } from '@/lib/domain/portal';
-
-/** Akun bersama satu kelas. Sengaja ditampilkan di layar sesuai brief. */
-const DEMO_USER = 'edutax';
-const DEMO_PASS = 'edutax2026';
+import { ensureSeedData } from '@/lib/domain/portal';
+import { findStudentByNim } from '@/lib/domain/students';
 
 function makeCaptcha() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -38,20 +35,30 @@ export default function LoginPage() {
       refreshCaptcha();
       return;
     }
-    if (userId.trim() !== DEMO_USER || password !== DEMO_PASS) {
-      setError('ID Pengguna atau Kata Sandi tidak sesuai.');
+
+    const cleanInput = userId.trim();
+    const student = findStudentByNim(cleanInput);
+
+    // Boleh login jika NIM terdaftar di daftar mahasiswa praktikum,
+    // atau pakai fallback demo 'edutax'
+    if (!student && cleanInput !== 'edutax') {
+      setError('NIM tidak terdaftar dalam Daftar Peserta Praktikum Perpajakan.');
       return;
     }
+
+    const personNik = student ? student.nim : '3271022601770007';
+    const personName = student ? student.nama : 'RAKA';
+
     updateDb((db) => {
       db.session = {
-        personNik: MAIN_ACCOUNT_SEED.nik,
-        personName: MAIN_ACCOUNT_SEED.name,
+        personNik,
+        personName,
         impersonatingTin: null,
         activeNitku: null,
         loggedInAt: new Date().toISOString(),
       };
-      ensureSeedData(db);
-      addAuditEvent(db, 'Login', 'Masuk ke EduTax');
+      ensureSeedData(db, { nik: personNik, name: personName });
+      addAuditEvent(db, 'Login', `Masuk ke EduTax sebagai ${personName} (${personNik})`);
     });
     router.push('/portal');
   }
@@ -93,12 +100,12 @@ export default function LoginPage() {
           <div className="mt-2.5 space-y-2">
             <div>
               <label className="field-label !mb-0.5 text-[11px]" htmlFor="userId">
-                ID Pengguna <span className="text-bad">*</span>
+                ID Pengguna (NIM Mahasiswa) <span className="text-bad">*</span>
               </label>
               <input
                 id="userId"
                 className="field-input !py-1 text-[11px]"
-                placeholder="NIK/NPWP/NITKU identitas khusus untuk ILAP dan Lembaga Lain"
+                placeholder="Masukkan 11 digit NIM Anda"
                 value={userId}
                 onChange={(e) => setUserId(e.target.value)}
                 autoComplete="username"
@@ -185,17 +192,13 @@ export default function LoginPage() {
             
             <div className="rounded-md border border-brand-200 bg-brand-50 p-2 text-[10px] leading-tight text-brand-800">
               <p className="flex items-center gap-1.5 font-semibold">
-                <Info size={12} /> Akun Demo — seluruh mahasiswa memakai akun yang sama
+                <Info size={12} /> Akun Praktikum Mahasiswa UNY
               </p>
               <p className="mt-1">
-                ID Pengguna: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_USER}</code>{' '}
-                Kata Sandi: <code className="rounded bg-white px-1.5 py-0.5">{DEMO_PASS}</code>{' '}
-                <span className="text-brand-600">(captcha diketik sesuai gambar)</span>
+                Gunakan <strong>NIM Anda</strong> sebagai ID Pengguna dan kata sandi praktikum untuk masuk.
               </p>
               <p className="mt-1 text-xxs text-brand-700">
-                Setelah masuk, identitas simulasi Anda otomatis terisi sebagai{' '}
-                <strong>{MAIN_ACCOUNT_SEED.nik} {MAIN_ACCOUNT_SEED.name}</strong> — kredensial login
-                di atas hanya untuk masuk bersama, bukan identitas wajib pajak itu sendiri.
+                Setelah masuk, identitas akun Orang Pribadi dan dokumen simulasi otomatis terisi sesuai dengan nama dan NIM Anda masing-masing.
               </p>
             </div>
           </div>

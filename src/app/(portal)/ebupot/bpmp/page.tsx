@@ -12,6 +12,7 @@ import { ExportIconRow } from '@/components/ui/ExportIconRow';
 import {
   csvRowsToRecords, downloadCsv, downloadExcelTemplate, downloadXls, parseSpreadsheetXml, pickCsvFile, printAsPdf,
 } from '@/lib/storage/csv';
+import { parseWithholdingDate } from '@/lib/domain/bupotValidation';
 import { Pencil } from 'lucide-react';
 
 /**
@@ -177,6 +178,10 @@ export default function BpmpPage() {
     const chosenNitku = nitku || tkus[0]?.nitku || `${entityTin}000000`;
 
     mutate((d) => {
+      const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
+      const finalTaxObjectCode = existing?.taxObjectCode && existing.fields?.taxObjectName === taxObjectName
+        ? existing.taxObjectCode
+        : taxObjectCode;
       const fields = {
         ptkp,
         jabatan,
@@ -184,8 +189,8 @@ export default function BpmpPage() {
         passportNumber: foreignEmployee ? passportNumber : undefined,
         taxCertificate,
         taxObjectName,
+        withholdingDate: existing?.fields?.withholdingDate,
       };
-      const existing = editingId ? d.bupots.find((b) => b.id === editingId) : undefined;
       if (existing) {
         Object.assign(existing, {
           status: submit ? 'SUBMITTED' : 'DRAFT',
@@ -193,7 +198,7 @@ export default function BpmpPage() {
           taxPeriodYear: year,
           counterpartTin: resolvedTin,
           counterpartName: name,
-          taxObjectCode,
+          taxObjectCode: finalTaxObjectCode,
           gross,
           rate: preview.rate,
           withheld: preview.withheld,
@@ -324,6 +329,8 @@ export default function BpmpPage() {
 
           const { resolvedTin, name } = resolveCounterpart(rec.CounterpartTin, '(tanpa nama)');
           const { withheld, rate } = withheldByTer(rec.StatusTaxExemption || 'K/0', g);
+          const parsedDate = rec.WithholdingDate ? parseWithholdingDate(rec.WithholdingDate) : null;
+          const targetObj = BPMP_TAX_OBJECTS.find((o) => o.code === rec.TaxObjectCode) ?? BPMP_TAX_OBJECTS[0];
           d.bupots.push({
             id: crypto.randomUUID(),
             kind: 'BPMP',
@@ -349,7 +356,8 @@ export default function BpmpPage() {
               foreignEmployee: isForeign,
               passportNumber: isForeign ? rec.CounterpartPassport : undefined,
               taxCertificate: rec.TaxCertificate || BPMP_TAX_CERTIFICATE_OPTIONS[0],
-              taxObjectName: BPMP_TAX_OBJECTS[0].name,
+              taxObjectName: targetObj.name,
+              withholdingDate: parsedDate ?? undefined,
             },
           });
           created++;
@@ -487,7 +495,7 @@ export default function BpmpPage() {
                   <td className="font-mono text-xxs">{r.idPlaceOfBusinessActivity}</td>
                   <td>
                     <div className="flex gap-2">
-                      {tab === 'BELUM_TERBIT' && r.status === 'DRAFT' && canDraftBpmp && (
+                      {tab === 'BELUM_TERBIT' && (r.status === 'DRAFT' || r.status === 'SUBMITTED') && canDraftBpmp && (
                         <button className="text-brand-600 hover:text-brand-800" title="Edit" onClick={() => openEdit(r)}>
                           <Pencil size={15} />
                         </button>

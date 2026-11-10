@@ -165,7 +165,10 @@ export const SEED_ENTITY = {
  * manual lebih dulu. Dipanggil dari halaman login, dijaga idempoten lewat
  * pengecekan TIN supaya tidak dobel kalau mahasiswa login berkali-kali.
  */
-export function ensureSeedData(db: Database) {
+export function ensureSeedData(db: Database, customUser?: { nik: string; name: string }) {
+  const mainNik = customUser?.nik || db.session?.personNik || MAIN_ACCOUNT_SEED.nik;
+  const mainName = customUser?.name || db.session?.personName || MAIN_ACCOUNT_SEED.name;
+
   if (!db.entities.some((e) => e.tin === SEED_ENTITY.tin)) {
     db.entities.push({
       tin: SEED_ENTITY.tin,
@@ -182,7 +185,7 @@ export function ensureSeedData(db: Database) {
       kluKode: '',
       kluDeskripsi: '',
       alamat: SEED_ENTITY.address,
-      picNiks: [MAIN_ACCOUNT_SEED.nik],
+      picNiks: [mainNik],
     });
   }
 
@@ -191,13 +194,13 @@ export function ensureSeedData(db: Database) {
   // terisi secara otomatis oleh sistem" — disemai di sini supaya formulir
   // itu langsung terisi penuh sejak kunjungan pertama, tanpa mahasiswa harus
   // mengetik alamat/kontak sendiri lebih dulu.
-  if (!db.mainAccountProfile) {
+  if (!db.mainAccountProfile || customUser) {
     db.mainAccountProfile = {
-      nik: MAIN_ACCOUNT_SEED.nik,
-      nama: MAIN_ACCOUNT_SEED.name,
+      nik: mainNik,
+      nama: mainName,
       alamat: 'Jl. Jenderal Gatot Subroto Kav. 40-42, Senayan, Kebayoran Baru, Jakarta Selatan',
-      email: 'testingctas@kemenkeu.go.id',
-      phone: '+6281999760161',
+      email: `${mainNik.toLowerCase()}@student.uny.ac.id`,
+      phone: '+628123456789',
       signingCredential: null,
     };
   }
